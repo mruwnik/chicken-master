@@ -32,3 +32,5 @@
   (str
    (->> date .getDay (nth (settings :day-names)))
    " " (.getMonth date) "/" (.getDate date)))
+
+(defn iso-date [date] (.toIsoString ^js/goog.date.Date date true))

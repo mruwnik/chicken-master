@@ -22,20 +22,20 @@
           selected-prods  @(re-frame/subscribe [::subs/order-edit-products])]
       [:div {}
        [:label "co"]
-       (for [{product :prod amount :amount} selected-prods]
-         (prod/product-item product amount available-prods))])
+       (for [[i {product :prod amount :amount}] (map-indexed vector selected-prods)]
+         (prod/product-item product amount available-prods i))])
     [:button {:type :button :on-click #(re-frame/dispatch [::event/add-product])} "+"]]
    js/console.log))
 
-(defn format-order [{:keys [id who when products]}]
+(defn format-order [{:keys [id who day hour products]}]
   [:li {:class :order :key (gensym)}
    [:div {:class :actions}
     [:button "O"]
-    [:button {:on-click #(re-frame/dispatch [::event/edit-order when id])} "E"]
+    [:button {:on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
     [:button "-"]]
    [:div {:class :who} who]
    (if (settings :show-order-time)
-     [:div {:class :when} (str (.getHours when) ":" (.getMinutes when))])
+     [:div {:class :when} hour])
    (->> products
         (map prod/format-product)
         (into [:ul {:class :products}]))])

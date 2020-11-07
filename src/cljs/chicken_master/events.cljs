@@ -9,16 +9,28 @@
 (re-frame/reg-event-db ::hide-modal (fn [db _] (assoc db :order-edit {})))
 (re-frame/reg-event-db
  ::edit-order
- (fn [{customers :customers :as db} [_ date id]]
-   (assoc db :order-edit (merge (get customers id)
-                                {:show true :day date}))))
+ (fn [{customers :customers :as db} [_ day id]]
+   (assoc db :order-edit
+          (-> customers
+              (get id)
+              (update :products (comp vec (partial map (partial zipmap [:prod :amount]))))
+              (merge {:show true :day day})))))
 
 (re-frame/reg-event-db ::add-product (fn [db _] (update-in db [:order-edit :products] conj {})))
+(re-frame/reg-event-db
+ ::selected-product
+ (fn [db [_ product product-no]]
+   (assoc-in db [:order-edit :products product-no :prod] product)))
+(re-frame/reg-event-db
+ ::changed-amount
+ (fn [db [_ amount product-no]]
+   (assoc-in db [:order-edit :products product-no :amount] amount)))
 
 
 (defn get-day [{:keys [days customers]} date]
   {:date date
-   :customers (->> (.toIsoString ^js/goog.date.Date date true)
+   :customers (->> date
+                   time/iso-date
                    (get days)
                    (map customers))})
 

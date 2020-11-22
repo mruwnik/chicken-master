@@ -20,6 +20,6 @@
 
 (defn init []
   (re-frame/dispatch-sync [::events/initialize-db])
-  (re-frame/dispatch-sync [::events/show-from-date (new js/Date "2020-09-05")])
+  (re-frame/dispatch-sync [::events/show-from-date (new js/Date)])
   (dev-setup)
   (mount-root))

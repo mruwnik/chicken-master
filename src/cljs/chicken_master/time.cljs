@@ -2,6 +2,8 @@
   (:require [chicken-master.config :refer [settings]])
   (:import [goog.date DateTime Date Interval]))
 
+(defn parse-date [date] (new Date (js/Date. date)))
+
 (defn date-offset
   "Return the `date` offset by the given number of `days`"
   [date days]
@@ -12,14 +14,16 @@
 (defn start-of-week
   "Get the start of the week for the given `date"
   [date]
-  (->> (.getDay date)
-       (- (settings :first-day-offset))
-       (date-offset date)))
+  (let [offset (mod (+ 7 (.getDay date) (- (settings :first-day-offset))) 7)]
+    (date-offset date (- offset))))
 
 (defn days-range
   "Return dates starting from `date`"
   ([date] (map (partial date-offset date) (range)))
   ([n date] (take n (days-range date))))
+
+(defn before? [d1 d2] (< (Date/compare d1 d2) 0))
+(defn after? [d1 d2] (> (Date/compare d1 d2) 0))
 
 (defn same-day?
   "Returns true when both dates are from the same day" [d1 d2]
@@ -29,8 +33,24 @@
 (defn today? "true when `d1` is today" [d1] (same-day? (js/Date.) d1))
 
 (defn format-date [date]
-  (str
-   (->> date .getDay (nth (settings :day-names)))
-   " " (.getMonth date) "/" (.getDate date)))
+  (when (settings :show-date)
+    (if (settings :show-day-name-with-date)
+      (str
+       (->> date .getDay (nth (settings :day-names)))
+       " " (inc (.getMonth date)) "/" (.getDate date))
+      (str (inc (.getMonth date)) "/" (.getDate date)))))
 
 (defn iso-date [date] (.toIsoString ^js/goog.date.Date date true))
+
+
+(comment
+  (with-redefs [settings {:first-day-offset 0}]
+    (= (->> (parse-date "2020-11-22") start-of-week iso-date) "2020-11-22")
+    (filter #(= (-> (parse-date %) start-of-week iso-date) "2020-11-22")
+            ["2020-11-22" "2020-11-23" "2020-11-24" "2020-11-25" "2020-11-26" "2020-11-27" "2020-11-28"]))
+
+  (with-redefs [settings {:first-day-offset 1}]
+    (= (->> (parse-date "2020-11-22") start-of-week iso-date) "2020-11-16")
+    (filter #(= (-> (parse-date %) start-of-week iso-date) "2020-11-23")
+            ["2020-11-23" "2020-11-24" "2020-11-25" "2020-11-26" "2020-11-27" "2020-11-28" "2020-11-29" ]))
+)

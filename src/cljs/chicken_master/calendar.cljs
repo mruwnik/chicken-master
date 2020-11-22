@@ -9,7 +9,7 @@
    [chicken-master.time :as time]))
 
 
-(defn add-order [date]
+(defn edit-order []
   (html/modal
    [:div
     (html/input :who "kto"
@@ -25,14 +25,19 @@
        (for [[i {product :prod amount :amount}] (map-indexed vector selected-prods)]
          (prod/product-item product amount available-prods i))])
     [:button {:type :button :on-click #(re-frame/dispatch [::event/add-product])} "+"]]
-   js/console.log))
+   ;; On success
+   (fn [] (re-frame/dispatch [::event/save-order]))))
 
-(defn format-order [{:keys [id who day hour products]}]
-  [:li {:class :order :key (gensym)}
+(defn format-order [{:keys [id who day hour products state]}]
+  [:li {:class [:order state] :key (gensym)}
    [:div {:class :actions}
-    [:button "O"]
+    (condp = state
+      :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id])} "✓"]
+      :fulfilled [:button {:on-click #(re-frame/dispatch [::event/reset-order id])} "X"]
+      :pending nil
+      :default nil)
     [:button {:on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
-    [:button "-"]]
+    [:button {:on-click #(re-frame/dispatch [::event/remove-order id])} "-"]]
    [:div {:class :who} who]
    (if (settings :show-order-time)
      [:div {:class :when} hour])
@@ -45,17 +50,21 @@
    [:div {:class :day-header} (time/format-date date)]
    [:div
     [:ul {:class :orders}
-     (map format-order customers)
+     (if (settings :hide-fulfilled-orders)
+       (->> customers (remove (comp #{:fulfilled} :state)) (map format-order))
+       (map format-order customers))
      [:button {:type :button
-               :on-click #(re-frame/dispatch [::event/edit-order date])} "+"]]]])
+               :on-click #(re-frame/dispatch [::event/edit-order (time/iso-date date)])} "+"]]]])
 
 (defn calendar-header []
-  (->> (settings :day-names)
+  (->> (:day-names settings)
+       cycle (drop (:first-day-offset settings))
+       (take 7)
        (map (fn [day] [:div {:class :day-header} day]))
        (into [])))
 
 (defn calendar [days]
   (->> days
        (map day)
-       (concat (when-not (settings :always-day-names) (calendar-header)))
+       (concat (when (settings :calendar-heading) (calendar-header)))
        (into [:div {:class [:calendar :full-height]}])))

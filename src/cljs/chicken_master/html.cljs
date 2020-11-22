@@ -16,7 +16,11 @@
 
 (defn modal [content on-submit]
   [:div {:class :popup}
-   [:form {:action "#" :on-submit on-submit}
+   [:form {:action "#"
+           :on-submit (fn [e]
+                        (.preventDefault e)
+                        (when (on-submit)
+                          (re-frame/dispatch [::event/hide-modal])))}
     content
     [:div {:class :form-buttons}
      [:button "add"]

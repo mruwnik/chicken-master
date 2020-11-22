@@ -10,6 +10,6 @@
   (let [name (re-frame/subscribe [::subs/name])]
     [:div {:class :full-height}
      (when @(re-frame/subscribe [::subs/show-edit-modal])
-       (cal/add-order (new js/Date)))
+       (cal/edit-order))
      (cal/calendar @(re-frame/subscribe [::subs/current-days]))
      ]))

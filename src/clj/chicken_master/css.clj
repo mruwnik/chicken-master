@@ -44,6 +44,8 @@
        [:.actions {:display :none
                    :float :right}]
        [:.order:hover [:.actions {:display :inline}]]
+       [:.order.pending {:color :grey}]
+       [:.order.fulfilled {:color :red}]
 
        [:.who {:font-size "18px"
                :font-weight :bold

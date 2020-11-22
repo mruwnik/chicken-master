@@ -35,7 +35,7 @@
       :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id])} "✓"]
       :fulfilled [:button {:on-click #(re-frame/dispatch [::event/reset-order id])} "X"]
       :pending nil
-      :default nil)
+      nil nil)
     [:button {:on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
     [:button {:on-click #(re-frame/dispatch [::event/remove-order id])} "-"]]
    [:div {:class :who} who]

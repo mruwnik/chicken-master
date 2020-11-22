@@ -9,7 +9,7 @@
                                            (assoc m k (->> v
                                                            (map :amount)
                                                            (reduce +)))) {})))
-      (select-keys [:id :who :day :hour :products])))
+      (select-keys [:id :who :day :hour :products :state])))
 
 ;;;;;;;; Backend mocks
 

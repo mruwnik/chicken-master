@@ -52,6 +52,7 @@
 (re-frame/reg-event-fx
  ::save-order
  (fn [{{order :order-edit} :db} _]
+   (println "saving")
    {:fx [[:dispatch [::hide-modal]]]
     :http {:method :post
            :url    "save-order"
@@ -108,6 +109,11 @@
     (when (seq missing-days)
       {:from (->> missing-days (sort time/before?) first time/iso-date)
        :to   (->> missing-days (sort time/before?) last time/iso-date)})))
+
+(re-frame/reg-event-fx
+ ::scroll-weeks
+ (fn [{db :db} [_ offset]]
+   {:fx [[:dispatch [::show-from-date (-> db :start-date time/parse-date (time/date-offset (* 7 offset)))]]]}))
 
 (re-frame/reg-event-fx
  ::show-from-date

@@ -16,8 +16,8 @@
        [:option {:key (gensym) :value product} (name product)])]]
    (html/input :amount "ile"
                {:type :number :default amount :min 0
-                ;; :on-blur #(re-frame/dispatch [::event/changed-amount (-> % .-target .-value) product-no])
-                :on-input #(re-frame/dispatch [::event/changed-amount (-> % .-target .-value) product-no])
+                :on-blur #(re-frame/dispatch [::event/changed-amount (-> % .-target .-value) product-no])
+                ;; :on-change #(re-frame/dispatch [::event/changed-amount (-> % .-target .-value) product-no])
                 })])
 
 (defn format-product [[product amount]]

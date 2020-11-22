@@ -5,6 +5,11 @@
   [:html {:height "100%"}
    [:body {:height "100%"}
     [:.full-height {:height "100%"}]
+
+    [:.scroll-bar {:position :absolute
+                   :right "10px"
+                   :width "50px"}]
+
     [:.popup {:position :fixed
               :height "100%"
               :width "100%"
@@ -59,4 +64,11 @@
                             :max-height "5px"}]]
 
         ]]]]]]
+
+  ; Chrome, Safari, Edge, Opera
+  ["input::-webkit-outer-spin-button" {:-webkit-appearance :none :margin 0}]
+  ["input::-webkit-inner-spin-button"{:-webkit-appearance :none :margin 0}]
+
+  ; Firefox
+  ["input[type=number]" {:-moz-appearance :textfield}]
 )

@@ -24,8 +24,6 @@
    ;; :show-confirmation-modal {:show nil
    ;;                           :on-confirm-event :bla-bla-bla
    ;;                           :params [1 2 3]}
-   :products {:eggs {}
-              :milk {}
-              :cabbage {}
-              :carrots {}}
+   :stock {:show nil}
+   :products {:eggs 22 :milk 32 :cabbage 54 :carrots 11 :cows 32 :ants 21}
    })

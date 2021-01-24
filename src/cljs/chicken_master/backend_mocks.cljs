@@ -1,7 +1,14 @@
-(ns chicken-master.orders
+(ns chicken-master.backend-mocks
   (:require [chicken-master.time :as time]))
 
-;;;;;;;; Backend mocks
+;;;; Stock
+
+(def stock-products (atom {:eggs 22 :milk 32 :cabbage 54 :carrots 11 :cows 32 :ants 21}))
+
+(defn get-all-products [] @stock-products)
+(defn save-stocks [new-products] (reset! stock-products new-products))
+
+;;; Orders
 
 (def id-counter (atom -1))
 (def days (atom
@@ -43,7 +50,6 @@
    (int (/ (- (time/parse-date to) (time/parse-date from)) (* 24 3600000)))
    (time/parse-date from)))
 
-;;; Actual stuff
 
 (defn fetch-days [{:keys [from to]}]
   (->> (days-between from to)
@@ -65,12 +71,16 @@
     (swap! customers #(dissoc % id))
     {day (->> day day-customers second)}))
 
-(defn- order-state [{id :id state :state}]
-  (println "fulfilling order" id)
+(defn- order-state [{id :id state :state :as bla}]
+  (prn "fulfilling order" id state bla)
+  (condp = state
+    :fulfilled (->> id (get @customers) :products (swap! stock-products #(merge-with - %1 %2)))
+    :waiting (->> id (get @customers) :products (swap! stock-products #(merge-with + %1 %2))))
   (let [day (-> (get @customers id) :day)]
     (swap! customers #(assoc-in % [id :state] state))
     (println id (get @customers id))
     {day (->> day day-customers second)}))
+
 
 (comment
 (replace-order

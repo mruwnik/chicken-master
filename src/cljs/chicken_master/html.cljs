@@ -32,7 +32,7 @@
                   (merge {:name id :id id}))]]))
 
 
-(defn modal [content on-submit]
+(defn modal [modal-id content on-submit]
   [:div {:class :popup}
    [:form {:action "#"
            :on-submit (fn [e]
@@ -42,7 +42,7 @@
     content
     [:div {:class :form-buttons}
      [:button "add"]
-     [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal])} "cancel"]]]])
+     [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "cancel"]]]])
 
 
 (comment

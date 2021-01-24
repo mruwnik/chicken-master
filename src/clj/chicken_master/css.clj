@@ -37,9 +37,9 @@
     (at-media
      {:max-width "800px"}
      [:.scroll-bar {:display :none}]
-     [:.scroll-button {:width "100%"
-                       :font-size "3em"
-                       :display :inherit}]
+     [:.menu-button {:width "100%"
+                     :font-size "3em"
+                     :display :inherit}]
      [:.popup
       [:form {
               :background-color "#fefefe"
@@ -75,7 +75,7 @@
      [:.day-header {:border "2px solid black"
                     :text-align :center
                     :font-size "2em"}]
-     [:.day.today {:border "2px solid red"}]
+     [:.day.today {:border "0.4em solid red"}]
      [:.day {:border "2px solid black"
              :overflow :auto}
 
@@ -108,7 +108,21 @@
                            :max-height "5px"}]
 
         ]]
-      [:.summary {:margin-top "10px"}]]]]]
+      [:.summary {:margin-top "10px"}]]]
+
+
+    [:.stock-modal
+     [:.add-product {:float :right}]
+     [:.stock-product {:margin "1em 0"}
+      [:.product-name {:display :inline-block
+                       :width "6em"}]
+      [:.stock-product-amount {:display :inline-block}
+       [:.input-item {:display :inline}
+        [:input {:width "40px"}]
+        [:label {:display :none}]]
+       ]]
+     ]
+    ]]
 
   ; Chrome, Safari, Edge, Opera
   ["input::-webkit-outer-spin-button" {:-webkit-appearance :none :margin 0}]

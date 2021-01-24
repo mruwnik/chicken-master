@@ -24,6 +24,7 @@
 
 (defn edit-order []
   (html/modal
+   :order-edit
    [:div
     (html/input :who "kto"
            {:required true

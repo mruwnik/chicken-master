@@ -7,9 +7,9 @@
 
 (defn product-item [what amount available product-no]
   (let [id (gensym)]
-    [:div {:key (gensym)}
+    [:div {:class :product-item-edit :key (gensym)}
      [:div {:class :input-item}
-      [:label {:for :product} "co"]
+       [:label {:for :product} "co"]
       [:select {:name (str "product-" id) :id :product :defaultValue what
                 :on-change #(re-frame/dispatch [::event/selected-product (-> % .-target .-value) product-no])}
        [:option {:value nil} "-"]
@@ -23,7 +23,7 @@
 
 (defn format-product [[product amount]]
   [:div {:key (gensym) :class :product}
+   [:span {:class :product-name} product]
    (if (settings :editable-number-inputs)
       [:input {:class :product-amount :type :number :min 0 :defaultValue amount}]
-      [:span {:class :product-amount} amount])
-   [:span {:class :product-name} product]])
+      [:span {:class :product-amount} amount])])

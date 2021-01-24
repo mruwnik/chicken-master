@@ -9,10 +9,12 @@
 (defn main-panel []
   (let [name (re-frame/subscribe [::subs/name])]
     [:div {:class :full-height}
+     [:button {:id :scroll-up-button :class :scroll-button :on-click #(re-frame/dispatch [::event/scroll-weeks -2])} "^"]
      [:div {:class :scroll-bar}
-      [:button {:on-click #(re-frame/dispatch [::event/scroll-weeks -2])} "^"]
-      [:button {:on-click #(re-frame/dispatch [::event/scroll-weeks 2])}"v"]]
+      [:button {:id :scroll-up :on-click #(re-frame/dispatch [::event/scroll-weeks -2])} "^"]
+      [:button {:id :scroll-down :on-click #(re-frame/dispatch [::event/scroll-weeks 2])} "v"]]
      (when @(re-frame/subscribe [::subs/show-edit-modal])
        (cal/edit-order))
      (cal/calendar @(re-frame/subscribe [::subs/current-days]))
+     [:button {:id :scroll-down-button :class :scroll-button :on-click #(re-frame/dispatch [::event/scroll-weeks 2])} "v"]
      ]))

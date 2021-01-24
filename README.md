@@ -1,5 +1,19 @@
 # chicken-master
 
+## TODO
+* daily view
+* infinite scroll
+
+* handle regular customers
+** every n days
+** copy over to next week
+** cancel regular order
+
+* settings menu
+
+* products CRM
+
+
 A [re-frame](https://github.com/day8/re-frame) application designed to ... well, that part is up to
 you.
 

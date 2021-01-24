@@ -32,15 +32,12 @@
            {:default @(re-frame/subscribe [::subs/order-edit-notes])})
     (let [available-prods @(re-frame/subscribe [::subs/available-products])
           selected-prods  @(re-frame/subscribe [::subs/order-edit-products])]
-      [:div {}
-       [:label "co"]
+      [:div {:class :product-items-edit}
        (for [[i {product :prod amount :amount}] (map-indexed vector selected-prods)]
          (prod/product-item product amount available-prods i))])
     [:button {:type :button :on-click #(re-frame/dispatch [::event/add-product])} "+"]]
    ;; On success
-   (fn [form]
-     (re-frame/dispatch [::event/save-order (format-raw-order form)])
-     )))
+   (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
 (defn format-order [{:keys [id who day hour notes products state]}]
   [:div {:class [:order state] :key (gensym)}
@@ -51,7 +48,10 @@
       :pending nil
       nil nil)
     [:button {:on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
-    [:button {:on-click #(re-frame/dispatch [::event/remove-order id])} "-"]]
+    [:button {:on-click #(re-frame/dispatch
+                          [::event/confirm-action
+                           "na pewno usunąć?"
+                           ::event/remove-order id])} "-"]]
    [:div {:class :who} who]
    (if (settings :show-order-time)
      [:div {:class :when} hour])
@@ -65,12 +65,21 @@
   [:div {:class [:day (when (time/today? date) :today)]}
    [:div {:class :day-header} (time/format-date date)]
    [:div
-    [:ul {:class :orders}
+    [:div {:class :orders}
      (if (settings :hide-fulfilled-orders)
        (->> customers (remove (comp #{:fulfilled} :state)) (map format-order))
        (map format-order customers))
      [:button {:type :button
-               :on-click #(re-frame/dispatch [::event/edit-order (time/iso-date date)])} "+"]]]])
+               :on-click #(re-frame/dispatch [::event/edit-order (time/iso-date date)])} "+"]
+     (when (seq (map :products customers))
+       [:div {:class :summary}
+        [:div {:class :header} "w sumie:"]
+        (->> customers
+             (map :products)
+             (apply merge-with +)
+             (sort-by first)
+             (map prod/format-product)
+             (into [:div {:class :products-sum}]))])]]])
 
 (defn calendar-header []
   (->> (:day-names settings)

@@ -10,9 +10,15 @@
 (re-frame/reg-event-db ::hide-modal (fn [db _] (assoc db :order-edit {})))
 
 (re-frame/reg-event-fx
+ ::confirm-action
+ (fn [_ [_ msg on-confirm-event & params]]
+   (when (js/confirm msg)
+     {:fx [[:dispatch (into [on-confirm-event] params)]]})))
+
+(re-frame/reg-event-fx
  ::remove-order
  (fn [_ [_ id]]
-   {:http {:method :post
+   {:http {:method :delete
            :url    "delete-order"
            :params {:id id}
            :on-success  [::process-fetched-days]
@@ -23,7 +29,7 @@
   (fn [{customers :customers :as db} [_ day id]]
     (assoc db :order-edit
            (-> customers
-               (get id)
+               (get id {:state :waiting})
                (update :products (comp vec (partial map (partial zipmap [:prod :amount]))))
                (merge {:show true :day day})))))
 
@@ -52,7 +58,6 @@
 (re-frame/reg-event-fx
  ::save-order
  (fn [{{order :order-edit} :db} [_ form]]
-   (println "saving" form)
    {:fx [[:dispatch [::hide-modal]]]
     :http {:method :post
            :url    "save-order"

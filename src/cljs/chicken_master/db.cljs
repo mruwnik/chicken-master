@@ -19,6 +19,11 @@
    ;;        "2020-10-16" [1 2 3]
    ;;        "2020-10-17" [1 2 3]
    ;;        "2020-10-18" [1 2 3]}
+   ;; :order-edit {:show true
+   ;;              :day "2020-10-10"}
+   ;; :show-confirmation-modal {:show nil
+   ;;                           :on-confirm-event :bla-bla-bla
+   ;;                           :params [1 2 3]}
    :products {:eggs {}
               :milk {}
               :cabbage {}

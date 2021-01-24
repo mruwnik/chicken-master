@@ -51,12 +51,14 @@
 
 (re-frame/reg-event-fx
  ::save-order
- (fn [{{order :order-edit} :db} _]
-   (println "saving")
+ (fn [{{order :order-edit} :db} [_ form]]
+   (println "saving" form)
    {:fx [[:dispatch [::hide-modal]]]
     :http {:method :post
            :url    "save-order"
-           :params (orders/clean-order order)
+           :params (merge
+                    (select-keys order [:id :day :hour :state])
+                    (select-keys form [:who :notes :products]))
            :on-success  [::process-fetched-days]
            :on-fail     [::failed-blah]}}))
 

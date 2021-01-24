@@ -1,16 +1,6 @@
 (ns chicken-master.orders
   (:require [chicken-master.time :as time]))
 
-(defn clean-order [order]
-  (-> order
-      (update :products #(->> %
-                              (group-by :prod)
-                              (reduce-kv (fn [m k v]
-                                           (assoc m k (->> v
-                                                           (map :amount)
-                                                           (reduce +)))) {})))
-      (select-keys [:id :who :day :hour :products :state])))
-
 ;;;;;;;; Backend mocks
 
 (def id-counter (atom -1))
@@ -19,7 +9,12 @@
                (time/days-range 90)
                (map (fn [date]
                       [(time/iso-date date) (repeatedly (rand-int 6) #(swap! id-counter inc))]))
-                 (into {}))))
+               (into {}))))
+(def notes ["bezglutenowy"
+            "tylko z robakami"
+            "przyjdzie wieczorem"
+            "wisi 2.50"
+            "chciała ukraść kozę"])
 (def products (atom [:eggs :milk :cabbage :carrots]))
 (def customer-names (atom ["mr.blobby (649 234 234)" "da police (0118 999 881 999 119 725 123123 12 3123 123 )" "johnny"]))
 
@@ -28,7 +23,9 @@
    (->> @days
         (map (fn [[day ids]]
                (map (fn [i]
-                      {:id i :day day :hour "02:12" :state :waiting
+                      {:id i :day day
+                       :notes (when (> (rand) 0.7) (rand-nth notes))
+                       :state :waiting
                        :who (rand-nth @customer-names)
                        :products (->> @products
                                       (random-sample 0.4)
@@ -45,6 +42,9 @@
   (time/days-range
    (int (/ (- (time/parse-date to) (time/parse-date from)) (* 24 3600000)))
    (time/parse-date from)))
+
+;;; Actual stuff
+
 (defn fetch-days [{:keys [from to]}]
   (->> (days-between from to)
        (map time/iso-date)

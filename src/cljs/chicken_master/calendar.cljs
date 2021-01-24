@@ -1,5 +1,6 @@
 (ns chicken-master.calendar
   (:require
+   [clojure.string :as str]
    [re-frame.core :as re-frame]
    [chicken-master.config :refer [settings]]
    [chicken-master.subs :as subs]
@@ -8,6 +9,18 @@
    [chicken-master.events :as event]
    [chicken-master.time :as time]))
 
+(defn format-raw-order [{:strs [who notes] :as raw-values}]
+  {:who who
+   :notes notes
+   :products (->> raw-values
+                  (remove (comp #{"who" "notes"} first))
+                  (map (fn [[k v]] [(str/split k "-") v]))
+                  (group-by (comp last first))
+                  (map #(sort-by first (second %)))
+                  (map (fn [[[_ amount] [_ product]]] [(keyword product) (js/parseInt amount)]))
+                  (group-by first)
+                  (map (fn [[product items]] [product (->> items (map last) (reduce +))]))
+                  (into {}))})
 
 (defn edit-order []
   (html/modal
@@ -15,9 +28,8 @@
     (html/input :who "kto"
            {:required true
             :default @(re-frame/subscribe [::subs/order-edit-who])})
-    (html/input :when "kiedy"
-           {:type :time :step 60
-            :default @(re-frame/subscribe [::subs/order-edit-when])})
+    (html/input :notes "notka"
+           {:default @(re-frame/subscribe [::subs/order-edit-notes])})
     (let [available-prods @(re-frame/subscribe [::subs/available-products])
           selected-prods  @(re-frame/subscribe [::subs/order-edit-products])]
       [:div {}
@@ -26,10 +38,12 @@
          (prod/product-item product amount available-prods i))])
     [:button {:type :button :on-click #(re-frame/dispatch [::event/add-product])} "+"]]
    ;; On success
-   (fn [] (re-frame/dispatch [::event/save-order]))))
+   (fn [form]
+     (re-frame/dispatch [::event/save-order (format-raw-order form)])
+     )))
 
-(defn format-order [{:keys [id who day hour products state]}]
-  [:li {:class [:order state] :key (gensym)}
+(defn format-order [{:keys [id who day hour notes products state]}]
+  [:div {:class [:order state] :key (gensym)}
    [:div {:class :actions}
     (condp = state
       :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id])} "✓"]
@@ -41,9 +55,11 @@
    [:div {:class :who} who]
    (if (settings :show-order-time)
      [:div {:class :when} hour])
+   (if (and (settings :show-order-notes) notes)
+     [:div {:class :notes} notes])
    (->> products
         (map prod/format-product)
-        (into [:ul {:class :products}]))])
+        (into [:div {:class :products}]))])
 
 (defn day [{:keys [date customers]}]
   [:div {:class [:day (when (time/today? date) :today)]}

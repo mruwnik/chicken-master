@@ -10,6 +10,7 @@
                :show-day-name-with-date true ; add the day name to each date
 
                :show-order-time false ; display the time of each order
+               :show-order-notes true ; display notes
                :editable-number-inputs false ; only allow number modifications in the edit modal
                :hide-fulfilled-orders false
                })

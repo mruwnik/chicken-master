@@ -14,10 +14,13 @@
    :notes notes
    :products (->> raw-values
                   (remove (comp #{"who" "notes"} first))
+                  (remove (comp str/blank? second))
                   (map (fn [[k v]] [(str/split k "-") v]))
                   (group-by (comp last first))
                   (map #(sort-by first (second %)))
-                  (map (fn [[[_ amount] [_ product]]] [(keyword product) (js/parseInt amount)]))
+                  (map (fn [[[_ amount] [_ product]]] [(keyword product) (prod/num-or-nil amount)]))
+                  (remove (comp nil? first))
+                  (remove (comp zero? second))
                   (group-by first)
                   (map (fn [[product items]] [product (->> items (map last) (reduce +))]))
                   (into {}))})
@@ -36,9 +39,9 @@
       [:div {:class :product-items-edit}
        (for [[i {product :prod amount :amount}] (map-indexed vector selected-prods)]
          (prod/product-item product amount available-prods i))])
-    [:button {:type :button :on-click #(re-frame/dispatch [::event/add-product])} "+"]]
+    ]
    ;; On success
-   (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
+   (fn [form] (prn (format-raw-order form))(re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
 (defn format-order [{:keys [id who day hour notes products state]}]
   [:div {:class [:order state] :key (gensym)}

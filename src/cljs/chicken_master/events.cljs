@@ -33,6 +33,7 @@
            (-> customers
                (get id {:state :waiting})
                (update :products (comp vec (partial map (partial zipmap [:prod :amount]))))
+               (update :products conj {})
                (merge {:show true :day day})))))
 
 (re-frame/reg-event-fx
@@ -69,11 +70,13 @@
            :on-success  [::process-fetched-days]
            :on-fail     [::failed-blah]}}))
 
-(re-frame/reg-event-db ::add-product (fn [db _] (update-in db [:order-edit :products] conj {})))
 (re-frame/reg-event-db
  ::selected-product
  (fn [db [_ product product-no]]
-   (assoc-in db [:order-edit :products product-no :prod] product)))
+   (let [db (assoc-in db [:order-edit :products product-no :prod] product)]
+     (if (-> db :order-edit :products last :prod)
+       (update-in db [:order-edit :products] conj {})
+       db))))
 (re-frame/reg-event-db
  ::changed-amount
  (fn [db [_ amount product-no]]

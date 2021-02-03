@@ -41,8 +41,8 @@
                           (re-frame/dispatch [::event/hide-modal])))}
     content
     [:div {:class :form-buttons}
-     [:button "add"]
-     [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "cancel"]]]])
+     [:button "ok"]
+     [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "anuluj"]]]])
 
 
 (comment

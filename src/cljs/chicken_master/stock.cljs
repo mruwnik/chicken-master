@@ -2,14 +2,10 @@
   (:require
    [re-frame.core :as re-frame]
    [chicken-master.config :refer [settings]]
+   [chicken-master.products :refer [num-or-nil number-input]]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]
    [chicken-master.events :as event]))
-
-
-(defn num-or-nil [val]
-  (let [i (js/parseInt val)]
-    (when-not (js/isNaN i) i)))
 
 
 (defn show-available []
@@ -23,10 +19,8 @@
        [:span {:class :product-name} product]
        [:div {:class :stock-product-amount}
         [:button {:type :button :on-click #(re-frame/dispatch [::event/update-product-stock product -1])} "-"]
-        (html/input (name product) ""
-                    {:type :number :default (or amount 0) :min 0
-                     :on-blur #(re-frame/dispatch [::event/set-stock-amount product (-> % .-target .-value js/parseInt)])
-                     })
+        (number-input (name product) "" (or amount 0)
+                      #(re-frame/dispatch [::event/set-stock-amount product (-> % .-target .-value num-or-nil)]))
         [:button {:type :button :on-click #(re-frame/dispatch [::event/update-product-stock product 1])} "+"]
         ]])]
    ;; On success

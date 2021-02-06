@@ -28,7 +28,9 @@
    (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
 (defn format-order [{:keys [id who day hour notes products state]}]
-  [:div {:class [:order state] :key (gensym)}
+  [:div {:class [:order state] :key (gensym)
+         :draggable true
+         :on-drag-start #(-> % .-dataTransfer (.setData "text" id))}
    [:div {:class :actions}
     (condp = state
       :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id])} "✓"]
@@ -50,7 +52,11 @@
         (into [:div {:class :products}]))])
 
 (defn day [{:keys [date orders]}]
-  [:div {:class [:day (when (time/today? date) :today)]}
+  [:div {:class [:day (when (time/today? date) :today)]
+         :on-drag-over #(.preventDefault %)
+         :on-drop #(let [id (-> % .-dataTransfer (.getData "text") prod/num-or-nil)]
+                     (.preventDefault %)
+                     (re-frame/dispatch [::event/move-order id (time/iso-date date)]))}
    [:div {:class :day-header} (time/format-date date)]
    [:div
     [:div {:class :orders}

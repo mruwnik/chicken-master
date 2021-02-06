@@ -35,6 +35,15 @@
            :on-success  [::process-fetched-days]
            :on-fail     [::failed-blah]}}))
 
+(re-frame/reg-event-fx
+ ::move-order
+ (fn [{{orders :orders start-date :start-date} :db} [_ id day]]
+   {:http {:method :post
+           :url    "save-order"
+           :params (-> id orders (assoc :day day :start-from start-date))
+           :on-success  [::process-fetched-days]
+           :on-fail     [::failed-blah]}}))
+
  (re-frame/reg-event-db
   ::edit-order
   (fn [{orders :orders :as db} [_ day id]]

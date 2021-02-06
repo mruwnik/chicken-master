@@ -11,12 +11,12 @@
 ;;; Orders
 
 (def id-counter (atom -1))
-(def days (atom
-           (->> (time/date-offset (new js/Date) -50)
-               (time/days-range 90)
-               (map (fn [date]
-                      [(time/iso-date date) (repeatedly (rand-int 6) #(swap! id-counter inc))]))
-               (into {}))))
+;; (def days (atom
+;;            (->> (time/date-offset (new js/Date) -50)
+;;                (time/days-range 90)
+;;                (map (fn [date]
+;;                       [(time/iso-date date) (repeatedly (rand-int 6) #(swap! id-counter inc))]))
+;;                (into {}))))
 (def notes ["bezglutenowy"
             "tylko z robakami"
             "przyjdzie wieczorem"
@@ -28,7 +28,10 @@
                       {:id 3 :name "johnny"}]))
 (def orders
   (atom
-   (->> @days
+   (->> (time/date-offset (new js/Date) -50)
+        (time/days-range 90)
+        (map (fn [date]
+               [(time/iso-date date) (repeatedly (rand-int 6) #(swap! id-counter inc))]))
         (map (fn [[day ids]]
                (map (fn [i]
                       {:id i :day day
@@ -58,7 +61,7 @@
                          :name customer-name})
   (fetch-stock params))
 
-(defn- day-customers [day] [day (->> day (get @days) (map (partial get @orders)))])
+(defn- day-customers [day] [day (->> @orders vals (filter (comp #{day} :day)))])
 (defn- days-between [from to]
   (time/days-range
    (int (/ (- (time/parse-date to) (time/parse-date from)) (* 24 3600000)))
@@ -70,17 +73,26 @@
        (map day-customers)
        (into {})))
 
-(defn- replace-order [order]
+(defn- replace-order [{start-from :start-from :as order}]
   (println "replacing order" order)
-  (let [order (update order :id #(or % (swap! id-counter inc)))]
-    (swap! days (fn [ds] (update ds (:day order) #(distinct (conj % (:id order))))))
-    (swap! orders #(assoc % (:id order) order))
-    {(->> order :day) (->> order :day day-customers second)}))
+  (let [order (-> order
+                  (dissoc :start-from)
+                  (update :id #(or % (swap! id-counter inc))))]
+    (prn "order 1" order)
+    (swap! orders assoc (:id order) order)
+    (prn "order 2" (@orders (:id order)))
+    (if start-from
+      (->> start-from
+           time/start-of-week
+           (time/days-range 28)
+           (map time/iso-date)
+           (map day-customers)
+           (into {}))
+      {(:day order) (->> order :day day-customers second)})))
 
 (defn- delete-order [{id :id}]
   (println "deleting order" id)
   (let [day (-> (get @orders id) :day)]
-    (swap! days (fn [ds] (update ds day (partial remove #{id}))))
     (swap! orders #(dissoc % id))
     {day (->> day day-customers second)}))
 

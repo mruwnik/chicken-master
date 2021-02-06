@@ -23,9 +23,10 @@
             "wisi 2.50"
             "chciała ukraść kozę"])
 (def products (atom [:eggs :milk :cabbage :carrots]))
-(def customer-names (atom ["mr.blobby (649 234 234)" "da police (0118 999 881 999 119 725 123123 12 3123 123 )" "johnny"]))
-
-(def customers
+(def customers (atom [{:id 1 :name "mr.blobby (649 234 234)"}
+                      {:id 2 :name "da police (0118 999 881 999 119 725 123123 12 3123 123 )"}
+                      {:id 3 :name "johnny"}]))
+(def orders
   (atom
    (->> @days
         (map (fn [[day ids]]
@@ -33,7 +34,7 @@
                       {:id i :day day
                        :notes (when (> (rand) 0.7) (rand-nth notes))
                        :state :waiting
-                       :who (rand-nth @customer-names)
+                       :who (rand-nth @customers)
                        :products (->> @products
                                       (random-sample 0.4)
                                       (map #(vector % (rand-int 10)))
@@ -44,12 +45,24 @@
         (map #(vector (:id %) %))
         (into {}))))
 
-(defn- day-customers [day] [day (->> day (get @days) (map (partial get @customers)))])
+
+(defn fetch-customers [_]
+  @customers)
+
+(defn fetch-stock [params]
+  {:customers (fetch-customers params)
+   :products (get-all-products)})
+
+(defn add-customer [{:keys [customer-name] :as params}]
+  (swap! customers conj {:id (->> @customers (map :id) (apply max) inc)
+                         :name customer-name})
+  (fetch-stock params))
+
+(defn- day-customers [day] [day (->> day (get @days) (map (partial get @orders)))])
 (defn- days-between [from to]
   (time/days-range
    (int (/ (- (time/parse-date to) (time/parse-date from)) (* 24 3600000)))
    (time/parse-date from)))
-
 
 (defn fetch-days [{:keys [from to]}]
   (->> (days-between from to)
@@ -61,24 +74,24 @@
   (println "replacing order" order)
   (let [order (update order :id #(or % (swap! id-counter inc)))]
     (swap! days (fn [ds] (update ds (:day order) #(distinct (conj % (:id order))))))
-    (swap! customers #(assoc % (:id order) order))
+    (swap! orders #(assoc % (:id order) order))
     {(->> order :day) (->> order :day day-customers second)}))
 
 (defn- delete-order [{id :id}]
   (println "deleting order" id)
-  (let [day (-> (get @customers id) :day)]
+  (let [day (-> (get @orders id) :day)]
     (swap! days (fn [ds] (update ds day (partial remove #{id}))))
-    (swap! customers #(dissoc % id))
+    (swap! orders #(dissoc % id))
     {day (->> day day-customers second)}))
 
 (defn- order-state [{id :id state :state :as bla}]
   (prn "fulfilling order" id state bla)
   (condp = state
-    :fulfilled (->> id (get @customers) :products (swap! stock-products #(merge-with - %1 %2)))
-    :waiting (->> id (get @customers) :products (swap! stock-products #(merge-with + %1 %2))))
-  (let [day (-> (get @customers id) :day)]
-    (swap! customers #(assoc-in % [id :state] state))
-    (println id (get @customers id))
+    :fulfilled (->> id (get @orders) :products (swap! stock-products #(merge-with - %1 %2)))
+    :waiting (->> id (get @orders) :products (swap! stock-products #(merge-with + %1 %2))))
+  (let [day (-> (get @orders id) :day)]
+    (swap! orders #(assoc-in % [id :state] state))
+    (println id (get @orders id))
     {day (->> day day-customers second)}))
 
 

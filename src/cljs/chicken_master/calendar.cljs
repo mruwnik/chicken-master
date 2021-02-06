@@ -1,6 +1,5 @@
 (ns chicken-master.calendar
   (:require
-   [clojure.string :as str]
    [re-frame.core :as re-frame]
    [chicken-master.config :refer [settings]]
    [chicken-master.subs :as subs]
@@ -9,39 +8,24 @@
    [chicken-master.events :as event]
    [chicken-master.time :as time]))
 
-(defn format-raw-order [{:strs [who notes] :as raw-values}]
-  {:who who
+(defn format-raw-order [{:strs [who who-id notes] :as raw-values}]
+  {:who {:name who :id (prod/num-or-nil who-id)}
    :notes notes
-   :products (->> raw-values
-                  (remove (comp #{"who" "notes"} first))
-                  (remove (comp str/blank? second))
-                  (map (fn [[k v]] [(str/split k "-") v]))
-                  (group-by (comp last first))
-                  (map #(sort-by first (second %)))
-                  (map (fn [[[_ amount] [_ product]]] [(keyword product) (prod/num-or-nil amount)]))
-                  (remove (comp nil? first))
-                  (remove (comp zero? second))
-                  (group-by first)
-                  (map (fn [[product items]] [product (->> items (map last) (reduce +))]))
-                  (into {}))})
+   :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
 (defn edit-order []
   (html/modal
    :order-edit
    [:div
-    (html/input :who "kto"
-           {:required true
-            :default @(re-frame/subscribe [::subs/order-edit-who])})
+    (let [who @(re-frame/subscribe [::subs/order-edit-who])]
+      [:div
+       (html/input :who "kto" {:required true :default (:name who)})
+       [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]])
     (html/input :notes "notka"
            {:default @(re-frame/subscribe [::subs/order-edit-notes])})
-    (let [available-prods @(re-frame/subscribe [::subs/available-products])
-          selected-prods  @(re-frame/subscribe [::subs/order-edit-products])]
-      [:div {:class :product-items-edit}
-       (for [[i {product :prod amount :amount}] (map-indexed vector selected-prods)]
-         (prod/product-item product amount available-prods i))])
-    ]
+    [prod/products-edit @(re-frame/subscribe [::subs/order-edit-products])]]
    ;; On success
-   (fn [form] (prn (format-raw-order form))(re-frame/dispatch [::event/save-order (format-raw-order form)]))))
+   (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
 (defn format-order [{:keys [id who day hour notes products state]}]
   [:div {:class [:order state] :key (gensym)}
@@ -56,7 +40,7 @@
                           [::event/confirm-action
                            "na pewno usunąć?"
                            ::event/remove-order id])} "-"]]
-   [:div {:class :who} who]
+   [:div {:class :who} (:name who)]
    (if (settings :show-order-time)
      [:div {:class :when} hour])
    (if (and (settings :show-order-notes) notes)
@@ -65,25 +49,28 @@
         (map prod/format-product)
         (into [:div {:class :products}]))])
 
-(defn day [{:keys [date customers]}]
+(defn day [{:keys [date orders]}]
   [:div {:class [:day (when (time/today? date) :today)]}
    [:div {:class :day-header} (time/format-date date)]
    [:div
     [:div {:class :orders}
      (if (settings :hide-fulfilled-orders)
-       (->> customers (remove (comp #{:fulfilled} :state)) (map format-order))
-       (map format-order customers))
-     [:button {:type :button
-               :on-click #(re-frame/dispatch [::event/edit-order (time/iso-date date)])} "+"]
-     (when (seq (map :products customers))
+       (->> orders (remove (comp #{:fulfilled} :state)) (map format-order))
+       (map format-order orders))
+     (when (settings :show-day-add-order)
+       [:button {:type :button
+                 :on-click #(re-frame/dispatch [::event/edit-order (time/iso-date date)])} "+"])
+     (when (seq (map :products orders))
        [:div {:class :summary}
+        [:hr {:class :day-seperator}]
         [:div {:class :header} "w sumie:"]
-        (->> customers
+        (->> orders
              (map :products)
              (apply merge-with +)
              (sort-by first)
              (map prod/format-product)
-             (into [:div {:class :products-sum}]))])]]])
+             (into [:div {:class :products-sum}]))])
+     ]]])
 
 (defn calendar-header []
   (->> (:day-names settings)

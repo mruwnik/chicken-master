@@ -7,7 +7,16 @@
    ;; required for http mocks
    [chicken-master.backend-mocks :as mocks]))
 
-(re-frame/reg-event-db ::initialize-db (fn [_ _] db/default-db))
+(re-frame/reg-event-fx
+ ::initialize-db
+ (fn [_ _]
+   {:db db/default-db
+    :dispatch [::show-from-date (new js/Date)]
+    :http {:method :post
+           :url    "get-stock"
+           :params {}
+           :on-success  [::process-stock]
+           :on-fail     [::failed-blah]}}))
 
 (re-frame/reg-event-db ::hide-modal (fn [db [_ modal]] (assoc-in db [modal :show] nil)))
 
@@ -28,19 +37,17 @@
 
  (re-frame/reg-event-db
   ::edit-order
-  (fn [{customers :customers :as db} [_ day id]]
+  (fn [{orders :orders :as db} [_ day id]]
     (assoc db :order-edit
-           (-> customers
+           (-> orders
                (get id {:state :waiting})
-               (update :products (comp vec (partial map (partial zipmap [:prod :amount]))))
-               (update :products conj {})
                (merge {:show true :day day})))))
 
 (re-frame/reg-event-fx
  ::fulfill-order
  (fn [{db :db} [_ id]]
-   {:db (assoc-in db [:customers id :state] :pending)
-    :fx [[:dispatch [::set-current-days]]]
+   {:db (assoc-in db [:orders id :state] :pending)
+    :dispatch [::set-current-days]
     :http {:method :post
            :url    "fulfill-order"
            :params {:id id}
@@ -50,7 +57,7 @@
 (re-frame/reg-event-fx
  ::reset-order
  (fn [{db :db} [_ id]]
-   {:db (assoc-in db [:customers id :state] :waiting)
+   {:db (assoc-in db [:orders id :state] :waiting)
     :fx [[:dispatch [::set-current-days]]]
     :http {:method :post
            :url    "reset-order"
@@ -61,12 +68,12 @@
 (re-frame/reg-event-fx
  ::save-order
  (fn [{{order :order-edit} :db} [_ form]]
-   {:fx [[:dispatch [::hide-modal :order-edit]]]
+   {:dispatch [::hide-modal :order-edit]
     :http {:method :post
            :url    "save-order"
            :params (merge
                     (select-keys order [:id :day :hour :state])
-                    (select-keys form [:who :notes :products]))
+                    (select-keys form [:id :day :hour :state :who :notes :products]))
            :on-success  [::process-fetched-days]
            :on-fail     [::failed-blah]}}))
 
@@ -83,12 +90,12 @@
    (assoc-in db [:order-edit :products product-no :amount] amount)))
 
 
-(defn get-day [{:keys [days customers]} date]
+(defn get-day [{:keys [days orders]} date]
   {:date date
-   :customers (->> date
-                   time/iso-date
-                   (get days)
-                   (map customers))})
+   :orders (->> date
+                time/iso-date
+                (get days)
+                (map orders))})
 
 (re-frame/reg-event-db
  ::set-current-days
@@ -106,7 +113,7 @@
    (println "fetched days" days)
    {:db (-> db
             (update :days #(reduce-kv (fn [m k v] (assoc m k (map :id v))) % days))
-            (update :customers #(reduce (fn [m cust] (assoc m (:id cust) cust)) % (-> days vals flatten))))
+            (update :orders #(reduce (fn [m cust] (assoc m (:id cust) cust)) % (-> days vals flatten))))
     :fx [[:dispatch [::set-current-days]]
          [:dispatch [::fetch-stock]]]}))
 
@@ -126,14 +133,14 @@
 (re-frame/reg-event-fx
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
-   {:fx [[:dispatch [::show-from-date (-> db :start-date time/parse-date (time/date-offset (* 7 offset)))]]]}))
+   {:dispatch [::show-from-date (-> db :start-date time/parse-date (time/date-offset (* 7 offset)))]}))
 
 (re-frame/reg-event-fx
  ::show-from-date
  (fn [{db :db} [_ day]]
    (let [missing (missing-days db day)
          effects {:db (assoc db :start-date day)
-                  :fx [[:dispatch [::set-current-days]]]}]
+                  :dispatch [::set-current-days]}]
      (if-not missing
        effects
        (assoc effects :http {:method :get
@@ -141,6 +148,21 @@
                              :params missing
                              :on-success  [::process-fetched-days]
                              :on-fail     [::failed-blah]})))))
+;; Customers events
+(re-frame/reg-event-fx
+ ::show-customers
+ (fn [{db :db} _]
+   {:db (assoc-in db [:clients :show] true)
+    :dispatch [::fetch-stock]}))
+
+(re-frame/reg-event-fx
+ ::add-customer
+ (fn [_ [_ customer-name]]
+   {:http {:method :post
+           :url    "add-customer"
+           :params {:customer-name customer-name}
+           :on-success  [::process-stock]
+           :on-fail     [::failed-blah]}}))
 
 ;;; Storage events
 
@@ -148,21 +170,23 @@
  ::show-stock
  (fn [{db :db} _]
    {:db (assoc-in db [:stock :show] true)
-    :fx [[:dispatch [::fetch-stock]]]}))
+    :dispatch [::fetch-stock]}))
 
 (re-frame/reg-event-fx
  ::fetch-stock
  (fn [_ _]
    {:http {:method :get
-           :url    "get-all-products"
+           :url    "get-stock"
            :on-success  [::process-stock]
            :on-fail     [::failed-blah]}}))
 
 (re-frame/reg-event-db
  ::process-stock
- (fn [db [_ stock]]
-   (println "fetched stock" stock)
-   (assoc db :products stock)))
+ (fn [db [_ {:keys [products customers]}]]
+   (println "fetched stock" products)
+   (assoc db
+          :products products
+          :customers customers)))
 
 (re-frame/reg-event-db
  ::update-product-stock
@@ -184,7 +208,7 @@
 (re-frame/reg-event-fx
  ::save-stock
  (fn [{db :db} [_ products]]
-   {:fx [[:dispatch [::hide-modal :stock]]]
+   {:dispatch [::hide-modal :stock]
     :http {:method :post
            :url    "save-stock"
            :body products
@@ -212,6 +236,9 @@
      "fulfill-order" (re-frame/dispatch (conj on-success (mocks/order-state (assoc params :state :fulfilled))))
      "reset-order" (re-frame/dispatch (conj on-success (mocks/order-state (assoc params :state :waiting))))
 
+     "get-stock" (re-frame/dispatch (conj on-success (mocks/fetch-stock params)))
+     "get-customers" (re-frame/dispatch (conj on-success (mocks/fetch-customers params)))
+     "add-customer" (re-frame/dispatch (conj on-success (mocks/add-customer params)))
      "get-all-products" (re-frame/dispatch (conj on-success (mocks/get-all-products)))
      "save-stock" (re-frame/dispatch (conj on-success (mocks/save-stocks body)))
    )))

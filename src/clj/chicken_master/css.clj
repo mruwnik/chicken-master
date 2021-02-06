@@ -20,7 +20,7 @@
               :overflow :auto
               :z-index 1
               :background-color "rgba(0,0,0,0.4)"}
-     [:form {
+     [:.popup-content {
              :background-color "#fefefe"
              :margin "15% auto"
              :padding "20px"
@@ -30,7 +30,7 @@
       [:.input-item
        [:label {:min-width "60px"
                 :display :inline-block}]]
-      [:.form-buttons {:margin "10px"}
+      [:..popup-form-buttons {:margin "10px"}
        [:* {:margin "20px"}]]]]
 
     [:.scroll-button {:display :none}]
@@ -41,7 +41,7 @@
                      :font-size "3em"
                      :display :inherit}]
      [:.popup
-      [:form {
+      [:.popup-content {
               :background-color "#fefefe"
               :margin "3% auto"
               :padding "20px"
@@ -56,7 +56,7 @@
     (at-media
      {:min-width "800px"}
      [:.popup
-      [:form {
+      [:.popup-content {
               :background-color "#fefefe"
               :margin "15% auto"
               :padding "20px"
@@ -122,6 +122,12 @@
         [:label {:display :none}]]
        ]]
      ]
+
+    [:.customers-modal
+     [:details.customer-order {:margin-left "1em" :padding "0.5em"}
+      [:.order-date-picker {:display :inline-block :width "75%" :cursor :pointer}]
+      [:.product-item-edit {:margin-left "1em"}]]]
+
     ]]
 
   ; Chrome, Safari, Edge, Opera

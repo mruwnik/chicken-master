@@ -25,24 +25,32 @@
   ([id label] (input id label {}))
   ([id label options]
      [:div {:class :input-item}
-      [:label {:for id} label]
+      (if label [:label {:for id} label])
       [:input (-> options
                   (assoc :defaultValue (:default options))
                   (dissoc :default)
                   (merge {:name id :id id}))]]))
 
 
-(defn modal [modal-id content on-submit]
-  [:div {:class :popup}
-   [:form {:action "#"
-           :on-submit (fn [e]
-                        (.preventDefault e)
-                        (when (-> e .-target form-values on-submit)
-                          (re-frame/dispatch [::event/hide-modal])))}
-    content
-    [:div {:class :form-buttons}
-     [:button "ok"]
-     [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "anuluj"]]]])
+(defn modal
+  ([modal-id content]
+   [:div {:class :popup}
+    [:div {:class :popup-content}
+     content
+     [:div {:class :form-buttons}
+      [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "ok"]]]])
+  ([modal-id content on-submit]
+   [:div {:class :popup}
+    [:form {:action "#"
+            :class :popup-content
+            :on-submit (fn [e]
+                         (.preventDefault e)
+                         (when (-> e .-target form-values on-submit)
+                           (re-frame/dispatch [::event/hide-modal modal-id])))}
+     content
+     [:div {:class :form-buttons}
+      [:button "ok"]
+      [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "anuluj"]]]]))
 
 
 (comment

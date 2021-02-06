@@ -51,13 +51,13 @@
         (map prod/format-product)
         (into [:div {:class :products}]))])
 
-(defn day [{:keys [date orders]}]
-  [:div {:class [:day (when (time/today? date) :today)]
+(defn day [[date orders]]
+  [:div {:class [:day (when (-> date time/parse-date time/today?) :today)]
          :on-drag-over #(.preventDefault %)
          :on-drop #(let [id (-> % .-dataTransfer (.getData "text") prod/num-or-nil)]
                      (.preventDefault %)
-                     (re-frame/dispatch [::event/move-order id (time/iso-date date)]))}
-   [:div {:class :day-header} (time/format-date date)]
+                     (re-frame/dispatch [::event/move-order id date]))}
+   [:div {:class :day-header} (-> date time/parse-date time/format-date)]
    [:div
     [:div {:class :orders}
      (if (settings :hide-fulfilled-orders)
@@ -65,7 +65,7 @@
        (map format-order orders))
      (when (settings :show-day-add-order)
        [:button {:type :button
-                 :on-click #(re-frame/dispatch [::event/edit-order (time/iso-date date)])} "+"])
+                 :on-click #(re-frame/dispatch [::event/edit-order date])} "+"])
      (when (seq (map :products orders))
        [:div {:class :summary}
         [:hr {:class :day-seperator}]
@@ -75,8 +75,7 @@
              (apply merge-with +)
              (sort-by first)
              (map prod/format-product)
-             (into [:div {:class :products-sum}]))])
-     ]]])
+             (into [:div {:class :products-sum}]))])]]])
 
 (defn calendar-header []
   (->> (:day-names settings)

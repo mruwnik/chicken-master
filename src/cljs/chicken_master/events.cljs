@@ -3,20 +3,40 @@
    [re-frame.core :as re-frame]
    [chicken-master.db :as db]
    [chicken-master.time :as time]
+   [chicken-master.config :refer [settings]]
+   [day8.re-frame.http-fx]
+   [ajax.edn :as edn]
 
    ;; required for http mocks
    [chicken-master.backend-mocks :as mocks]))
+
+(defn http-request [method endpoint & {:keys [params body on-success on-failure]
+                                       :or {on-success ::process-fetched-days
+                                            on-failure ::failed-blah}}]
+  {:method method
+   :uri (str (settings :backend-url) endpoint)
+   :headers {"Content-Type" "application/edn"
+             "authorization" "Basic c2lsb2E6a3JhY2g="}
+   :format (edn/edn-request-format)
+   :body (some-> body pr-str)
+   :params params
+   :response-format (edn/edn-response-format)
+   :on-success  [on-success]
+   :on-fail     [on-failure]})
+
+(defn http-get [endpoint params on-success]
+  (http-request :get endpoint :params params :on-success on-success))
+
+(defn http-post [endpoint body]
+  (http-request :post endpoint :body body))
 
 (re-frame/reg-event-fx
  ::initialize-db
  (fn [_ _]
    {:db db/default-db
-    :dispatch [::show-from-date (new js/Date)]
-    :http {:method :post
-           :url    "get-stock"
-           :params {}
-           :on-success  [::process-stock]
-           :on-fail     [::failed-blah]}}))
+    :fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
+         [:dispatch [::fetch-stock]]
+         [:dispatch [::fetch-orders]]]}))
 
 (re-frame/reg-event-db ::hide-modal (fn [db [_ modal]] (assoc-in db [modal :show] nil)))
 
@@ -29,20 +49,14 @@
 (re-frame/reg-event-fx
  ::remove-order
  (fn [_ [_ id]]
-   {:http {:method :delete
-           :url    "delete-order"
-           :params {:id id}
-           :on-success  [::process-fetched-days]
-           :on-fail     [::failed-blah]}}))
+   {(settings :http-dispatch) (http-request :delete (str "orders/" id))}))
 
 (re-frame/reg-event-fx
  ::move-order
  (fn [{{orders :orders start-date :start-date} :db} [_ id day]]
-   {:http {:method :post
-           :url    "save-order"
-           :params (-> id orders (assoc :day day :start-from start-date))
-           :on-success  [::process-fetched-days]
-           :on-fail     [::failed-blah]}}))
+   {(settings :http-dispatch)
+    (http-request :put (str "orders/" id)
+                  :body (-> id orders (assoc :day day :start-from start-date)))}))
 
  (re-frame/reg-event-db
   ::edit-order
@@ -56,107 +70,57 @@
  ::fulfill-order
  (fn [{db :db} [_ id]]
    {:db (assoc-in db [:orders id :state] :pending)
-    :dispatch [::set-current-days]
-    :http {:method :post
-           :url    "fulfill-order"
-           :params {:id id}
-           :on-success  [::process-fetched-days]
-           :on-fail     [::failed-blah]}}))
+    (settings :http-dispatch) (http-request :post (str "orders/" id "/fulfilled"))}))
 
 (re-frame/reg-event-fx
  ::reset-order
  (fn [{db :db} [_ id]]
    {:db (assoc-in db [:orders id :state] :waiting)
-    :fx [[:dispatch [::set-current-days]]]
-    :http {:method :post
-           :url    "reset-order"
-           :params {:id id}
-           :on-success  [::process-fetched-days]
-           :on-fail     [::failed-blah]}}))
+    (settings :http-dispatch) (http-request :post (str "orders/" id "/waiting"))}))
 
 (re-frame/reg-event-fx
  ::save-order
  (fn [{{order :order-edit} :db} [_ form]]
    {:dispatch [::hide-modal :order-edit]
-    :http {:method :post
-           :url    "save-order"
-           :params (merge
-                    (select-keys order [:id :day :hour :state])
-                    (select-keys form [:id :day :hour :state :who :notes :products]))
-           :on-success  [::process-fetched-days]
-           :on-fail     [::failed-blah]}}))
+    (settings :http-dispatch) (http-post (str "orders")
+                                         (merge
+                                          (select-keys order [:id :day :hour :state])
+                                          (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
 (re-frame/reg-event-db
- ::selected-product
- (fn [db [_ product product-no]]
-   (let [db (assoc-in db [:order-edit :products product-no :prod] product)]
-     (if (-> db :order-edit :products last :prod)
-       (update-in db [:order-edit :products] conj {})
-       db))))
-(re-frame/reg-event-db
- ::changed-amount
- (fn [db [_ amount product-no]]
-   (assoc-in db [:order-edit :products product-no :amount] amount)))
-
-
-(defn get-day [{:keys [days orders]} date]
-  {:date date
-   :orders (->> date
-                time/iso-date
-                (get days)
-                (map orders))})
-
-(re-frame/reg-event-db
- ::set-current-days
- (fn [{start-day :start-date :as db} _]
-   (->> start-day
-        time/parse-date
-        time/start-of-week
-        (time/days-range 14)
-        (map (partial get-day db))
-        (assoc db :current-days))))
-
-(re-frame/reg-event-fx
  ::process-fetched-days
- (fn [{db :db} [_ days]]
-   (println "fetched days" days)
-   {:db (-> db
-            (update :days #(reduce-kv (fn [m k v] (assoc m k (map :id v))) % days))
-            (update :orders #(reduce (fn [m cust] (assoc m (:id cust) cust)) % (-> days vals flatten))))
-    :fx [[:dispatch [::set-current-days]]
-         [:dispatch [::fetch-stock]]]}))
-
-
-(defn missing-days
-  "Return a map of missing days to be fetched."
-  [db day]
-  (let [missing-days (->> day
-                          time/parse-date
-                          time/start-of-week
-                          (time/days-range 28)
-                          (remove (comp (:days db {}) time/iso-date)))]
-    (when (seq missing-days)
-      {:from (->> missing-days (sort time/before?) first time/iso-date)
-       :to   (->> missing-days (sort time/before?) last time/iso-date)})))
+ (fn [db [_ days]]
+   (-> db
+       (update :current-days #(map (fn [[day orders]]
+                                     [day (if (contains? days day)
+                                            (days day) orders)]) %))
+       (update :orders #(reduce (fn [m cust] (assoc m (:id cust) cust)) % (-> days vals flatten))))))
 
 (re-frame/reg-event-fx
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
-   {:dispatch [::show-from-date (-> db :start-date time/parse-date (time/date-offset (* 7 offset)))]}))
+   {:fx [[:dispatch [::fetch-stock]]
+         [:dispatch [::show-from-date (-> db
+                                          :start-date
+                                          time/parse-date
+                                          (time/date-offset (* 7 offset))
+                                          time/iso-date)]]]}))
+
+(re-frame/reg-event-db
+ ::show-from-date
+ (fn [{:keys [start-date orders] :as db} [_ day]]
+   (let [day (or day start-date)
+         days (into #{} (time/get-weeks day 2))
+         filtered-orders (->> orders vals (filter days))]
+     (assoc db
+            :start-date day
+            :current-days (map #(vector % (get filtered-orders %)) days)))))
 
 (re-frame/reg-event-fx
- ::show-from-date
- (fn [{db :db} [_ day]]
-   (let [missing (missing-days db day)
-         effects {:db (assoc db :start-date day)
-                  :dispatch [::set-current-days]}]
-     (if-not missing
-       effects
-       (assoc effects :http {:method :get
-                             :url    "get-days"
-                             :params missing
-                             :on-success  [::process-fetched-days]
-                             :on-fail     [::failed-blah]})))))
+ ::fetch-orders
+ (fn [_ [_ from to]]
+   {(settings :http-dispatch) (http-get "orders" {} ::process-stock)}))
+
 ;; Customers events
 (re-frame/reg-event-fx
  ::show-customers
@@ -167,11 +131,9 @@
 (re-frame/reg-event-fx
  ::add-customer
  (fn [_ [_ customer-name]]
-   {:http {:method :post
-           :url    "add-customer"
-           :params {:customer-name customer-name}
-           :on-success  [::process-stock]
-           :on-fail     [::failed-blah]}}))
+   {(settings :http-dispatch) (http-request :post "customers"
+                                            :body {:name customer-name}
+                                            :on-success ::process-stock)}))
 
 ;;; Storage events
 
@@ -184,18 +146,19 @@
 (re-frame/reg-event-fx
  ::fetch-stock
  (fn [_ _]
-   {:http {:method :get
-           :url    "get-stock"
-           :on-success  [::process-stock]
-           :on-fail     [::failed-blah]}}))
+   {(settings :http-dispatch) (http-get "stock" {} ::process-stock)}))
 
-(re-frame/reg-event-db
+(defn assoc-if [coll key val] (if val (assoc coll key val) coll))
+(re-frame/reg-event-fx
  ::process-stock
- (fn [db [_ {:keys [products customers]}]]
-   (println "fetched stock" products)
-   (assoc db
-          :products products
-          :customers customers)))
+ (fn [{db :db} [_ {:keys [products customers orders]}]]
+   (prn products customers orders)
+   {:db (-> db
+            (assoc-if :products products)
+            (assoc-if :customers customers)
+            (assoc-if :orders orders))
+    :dispatch [::process-fetched-days (group-by :day (vals orders))]
+    }))
 
 (re-frame/reg-event-db
  ::update-product-stock
@@ -215,13 +178,9 @@
 
 (re-frame/reg-event-fx
  ::save-stock
- (fn [{db :db} [_ products]]
+ (fn [_ [_ products]]
    {:dispatch [::hide-modal :stock]
-    :http {:method :post
-           :url    "save-stock"
-           :body products
-           :on-success  [::process-fetched-days]
-           :on-fail     [::failed-blah]}}))
+    (settings :http-dispatch) (http-request :post "products" :body products :on-sucess ::process-stock)}))
 
 
 
@@ -236,17 +195,33 @@
 
 (re-frame/reg-fx
  :http
- (fn [{:keys [method url params body on-success on-fail]}]
-   (condp = url
-     "get-days" (re-frame/dispatch (conj on-success (mocks/fetch-days params)))
-     "save-order" (re-frame/dispatch (conj on-success (mocks/replace-order params)))
-     "delete-order" (re-frame/dispatch (conj on-success (mocks/delete-order params)))
-     "fulfill-order" (re-frame/dispatch (conj on-success (mocks/order-state (assoc params :state :fulfilled))))
-     "reset-order" (re-frame/dispatch (conj on-success (mocks/order-state (assoc params :state :waiting))))
+ (fn [{:keys [method uri params body on-success on-fail]}]
+   (condp = uri
+     "http://localhost:3000/stock" (re-frame/dispatch (conj on-success (mocks/fetch-stock params)))
 
-     "get-stock" (re-frame/dispatch (conj on-success (mocks/fetch-stock params)))
      "get-customers" (re-frame/dispatch (conj on-success (mocks/fetch-customers params)))
      "add-customer" (re-frame/dispatch (conj on-success (mocks/add-customer params)))
-     "get-all-products" (re-frame/dispatch (conj on-success (mocks/get-all-products)))
      "save-stock" (re-frame/dispatch (conj on-success (mocks/save-stocks body)))
+     (let [parts (clojure.string/split uri "/")]
+       (cond
+         (and (= method :get) (= uri "http://localhost:3000/orders"))
+         (re-frame/dispatch (conj on-success (mocks/fetch-orders params)))
+
+         (and (= method :post) (= uri "http://localhost:3000/orders"))
+         (re-frame/dispatch (conj on-success (mocks/replace-order nil (cljs.reader/read-string body))))
+
+         (and (= method :post) (= uri "http://localhost:3000/products"))
+         (re-frame/dispatch (conj on-success (mocks/save-stocks (cljs.reader/read-string body))))
+
+         (= method :delete)
+         (re-frame/dispatch (conj on-success (mocks/delete-order (-> parts (nth 4) (js/parseInt)))))
+
+
+         (and (= method :post) (= uri "http://localhost:3000/customers"))
+         (re-frame/dispatch (conj on-success (mocks/add-customer (cljs.reader/read-string body))))
+
+         (-> parts last #{"fulfilled" "waiting"})
+         (re-frame/dispatch (conj on-success (mocks/order-state {:id (-> parts (nth 4) (js/parseInt)) :state (keyword (last parts))})))
+         true (prn "unhandled" method uri)
+       ))
    )))

@@ -10,7 +10,7 @@
 (re-frame/reg-sub ::show-stock-modal (fn [db] (-> db :stock :show)))
 (re-frame/reg-sub ::show-customers-modal (fn [db] (-> db :clients :show)))
 
-(re-frame/reg-sub ::order-edit-who (fn [db] (println (:order-edit db)) (-> db :order-edit :who)))
+(re-frame/reg-sub ::order-edit-who (fn [db] (-> db :order-edit :who)))
 (re-frame/reg-sub ::order-edit-notes (fn [db] (-> db :order-edit :notes)))
 (re-frame/reg-sub ::order-edit-products (fn [db] (-> db :order-edit :products)))
 

@@ -14,4 +14,7 @@
                :show-order-notes true ; display notes
                :editable-number-inputs false ; only allow number modifications in the edit modal
                :hide-fulfilled-orders false
+
+               :http-dispatch :http;-xhrio
+               :backend-url "http://localhost:3000/"
                })

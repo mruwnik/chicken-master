@@ -34,15 +34,16 @@
 
 (defn modal
   ([modal-id content]
-   [:div {:class :popup}
-    [:div {:class :popup-content}
+   [:div {:class :popup :on-click #(re-frame/dispatch [::event/hide-modal modal-id])}
+    [:div {:class :popup-content :on-click #(.stopPropagation %)}
      content
      [:div {:class :form-buttons}
       [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "ok"]]]])
   ([modal-id content on-submit]
-   [:div {:class :popup}
+   [:div {:class :popup :on-click #(re-frame/dispatch [::event/hide-modal modal-id])}
     [:form {:action "#"
             :class :popup-content
+            :on-click #(.stopPropagation %)
             :on-submit (fn [e]
                          (.preventDefault e)
                          (when (-> e .-target form-values on-submit)

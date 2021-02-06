@@ -2,6 +2,8 @@
   (:require [chicken-master.config :refer [settings]])
   (:import [goog.date DateTime Date Interval]))
 
+(defn today [] (new Date))
+
 (defn parse-date [date] (new Date (js/Date. date)))
 
 (defn date-offset
@@ -41,6 +43,13 @@
       (str (inc (.getMonth date)) "/" (.getDate date)))))
 
 (defn iso-date [date] (.toIsoString ^js/goog.date.Date date true))
+
+(defn get-weeks [from n]
+  (->> from
+       parse-date
+       start-of-week
+       (days-range (* 7 n))
+       (map iso-date)))
 
 
 (comment

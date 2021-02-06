@@ -11,7 +11,7 @@
 (defn order-adder [order]
   (let [state (reagent/atom order)]
     (fn []
-      [:details {:class :customer-order :key (gensym) :open (:open @state)}
+      [:details {:class (or (:class order) :customer-order) :key (gensym) :open (:open @state)}
        [:summary {:on-click #(swap! state update :open not)}
         [prod/item-adder
          :type :date
@@ -34,8 +34,8 @@
       (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
         [:details {:class "client" :key (gensym)}
          [:summary name]
-         (for [order (sort-by :day (client-orders id))]
+         [order-adder {:who who}]
+         (for [order (reverse (sort-by :day (client-orders id)))]
             [order-adder (assoc order :key (gensym))])
-         [order-adder who :class :new-user]
          ]))]
      ))

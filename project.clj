@@ -7,10 +7,13 @@
                  [thheller/shadow-cljs "2.11.0"]
                  [reagent "0.10.0"]
                  [re-frame "1.1.1"]
+                 [day8.re-frame/http-fx "0.2.2"]
                  [garden "1.3.10"]
                  [ns-tracker "0.4.0"]
                  [compojure "1.6.2"]
                  [yogthos/config "1.1.7"]
+                 [ring-basic-authentication "1.1.0"]
+                 [ring-cors "0.1.13"]
                  [ring "1.8.1"]]
 
   :plugins [[lein-shadow "0.2.2"]
@@ -34,7 +37,7 @@
                                     :pretty-print? true}}]}
 
   :shadow-cljs {:nrepl {:port 8777}
-                
+
                 :builds {:app {:target :browser
                                :output-dir "resources/public/js/compiled"
                                :asset-path "/js/compiled"
@@ -45,14 +48,14 @@
                                           :http-port 8280
                                           :http-handler chicken-master.handler/dev-handler
                                           }}}}
-  
+
   :shell {:commands {"karma" {:windows         ["cmd" "/c" "karma"]
                               :default-command "karma"}
                      "open"  {:windows         ["cmd" "/c" "start"]
                               :macosx          "open"
                               :linux           "xdg-open"}}}
 
-  :aliases {"dev"          ["do" 
+  :aliases {"dev"          ["do"
                             ["shell" "echo" "\"DEPRECATED: Please use lein watch instead.\""]
                             ["watch"]]
             "watch"        ["with-profile" "dev" "do"
@@ -82,7 +85,7 @@
     :source-paths ["dev"]}
 
    :prod {}
-   
+
    :uberjar {:source-paths ["env/prod/clj"]
              :omit-source  true
              :main         chicken-master.server

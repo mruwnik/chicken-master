@@ -8,27 +8,12 @@
    [chicken-master.html :as html]
    [chicken-master.events :as event]))
 
-(defn item-adder [& {:keys [type value callback button class]
-                      :or {type :text value "" button nil}}]
-  (let [state (reagent/atom value)]
-    (fn []
-      [:div {:class class :on-click #(.stopPropagation %)}
-       [:input {:type type :name :user-name :default value :value @state
-                :on-change #(let [val (-> % .-target .-value)]
-                              (reset! state val)
-                              (if-not button (callback val)))}]
-       (if button
-         [:button {:class :add-product
-                   :type :button
-                   :disabled (= @state "")
-                   :on-click (if callback #(-> state (reset-vals! value) first callback))} button])])))
-
 (defn order-adder [order]
   (let [state (reagent/atom order)]
     (fn []
       [:details {:class :customer-order :key (gensym) :open (:open @state)}
        [:summary {:on-click #(swap! state update :open not)}
-        [item-adder
+        [prod/item-adder
          :type :date
          :value (:day @state)
          :class :order-date-picker
@@ -42,7 +27,7 @@
    :clients
    [:div {:class :customers-modal}
     [:h2 "Clienci"]
-    [item-adder :callback #(re-frame/dispatch [::event/add-customer %]) :button "+"]
+    [prod/item-adder :callback #(re-frame/dispatch [::event/add-customer %]) :button "+"]
     (let [client-orders (->> @(re-frame/subscribe [::subs/orders])
                              vals
                              (group-by #(get-in % [:who :id])))]

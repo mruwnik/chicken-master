@@ -209,10 +209,9 @@
    (assoc-in db [:products product] i)))
 
 (re-frame/reg-event-db
- ::set-stock-amount
- (fn [db [_ product i]]
-   (prn i)
-   (assoc-in db [:products product] i)))
+ ::delete-product
+ (fn [db [_ product]]
+   (update db :products dissoc product)))
 
 (re-frame/reg-event-fx
  ::save-stock

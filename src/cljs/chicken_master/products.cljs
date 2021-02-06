@@ -78,3 +78,18 @@
    (if (settings :editable-number-inputs)
      (number-input (str "amount-" product) "" amount nil)
      [:span {:class :product-amount} amount])])
+
+(defn item-adder [& {:keys [type value callback button class]
+                     :or {type :text value "" button nil}}]
+  (let [state (reagent/atom value)]
+    (fn []
+      [:div {:class class :on-click #(.stopPropagation %)}
+       [:input {:type type :name :user-name :default value :value @state
+                :on-change #(let [val (-> % .-target .-value)]
+                              (reset! state val)
+                              (if-not button (callback val)))}]
+       (if button
+         [:button {:class :add-product
+                   :type :button
+                   :disabled (= @state "")
+                   :on-click (if callback #(-> state (reset-vals! value) first callback))} button])])))

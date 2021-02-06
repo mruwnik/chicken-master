@@ -124,6 +124,7 @@
      ]
 
     [:.customers-modal
+     [:details {:padding "0.5em"}]
      [:details.customer-order {:margin-left "1em" :padding "0.5em"}
       [:.order-date-picker {:display :inline-block :width "75%" :cursor :pointer}]
       [:.product-item-edit {:margin-left "1em"}]]]

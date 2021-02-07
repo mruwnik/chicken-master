@@ -5,18 +5,25 @@
    [chicken-master.stock :as stock]
    [chicken-master.customers :as cust]
    [chicken-master.calendar :as cal]
-   [chicken-master.events :as event]))
+   [chicken-master.events :as event]
+   [chicken-master.html :as html]
+   [chicken-master.config :refer [settings-options]]))
 
+(defn show-settings []
+  (html/modal :settings (settings-options)))
 
 (defn main-panel []
   [:div {:class :full-height}
    (cond
      @(re-frame/subscribe [::subs/show-stock-modal]) (stock/show-available)
+     @(re-frame/subscribe [::subs/show-settings-modal]) (show-settings)
      @(re-frame/subscribe [::subs/show-customers-modal]) (cust/show-customers)
      @(re-frame/subscribe [::subs/show-edit-modal]) (cal/edit-order))
 
    [:button {:id :show-stock-button :class :menu-button :on-click #(re-frame/dispatch [::event/show-stock])} "Magazyn"]
    [:button {:id :show-clients-button :class :menu-button :on-click #(re-frame/dispatch [::event/show-customers])} "Klienci"]
+   [:button {:id :show-clients-button :class :menu-button :on-click #(re-frame/dispatch [::event/show-settings])} "Ustawienia"]
+   ;; (re-frame/dispatch [::event/show-settings])
 
    [:button {:id :scroll-up-button :class [:menu-button :scroll-button] :on-click #(re-frame/dispatch [::event/scroll-weeks -2])} "^"]
 
@@ -24,6 +31,6 @@
     [:button {:id :scroll-up :on-click #(re-frame/dispatch [::event/scroll-weeks -2])} "^"]
     [:button {:id :scroll-down :on-click #(re-frame/dispatch [::event/scroll-weeks 2])} "v"]]
 
-   (cal/calendar @(re-frame/subscribe [::subs/current-days]))
+   (cal/calendar @(re-frame/subscribe [::subs/current-days]) @(re-frame/subscribe [::subs/settings]))
    [:button {:id :scroll-down-button :class [:menu-button :scroll-button] :on-click #(re-frame/dispatch [::event/scroll-weeks 2])} "v"]
    ])

@@ -3,7 +3,7 @@
    [re-frame.core :as re-frame]
    [chicken-master.db :as db]
    [chicken-master.time :as time]
-   [chicken-master.config :refer [settings]]
+   [chicken-master.config :refer [settings default-settings]]
    [day8.re-frame.http-fx]
    [ajax.edn :as edn]
 
@@ -33,7 +33,8 @@
 (re-frame/reg-event-fx
  ::initialize-db
  (fn [_ _]
-   {:db db/default-db
+   (time/update-settings default-settings)
+   {:db (assoc db/default-db :settings default-settings)
     :fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
          [:dispatch [::fetch-stock]]
          [:dispatch [::fetch-orders]]]}))
@@ -99,7 +100,7 @@
 (re-frame/reg-event-fx
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
-   {:fx [[:dispatch [::fetch-stock]]
+   {:fx [;[:dispatch [::fetch-stock]]
          [:dispatch [::show-from-date (-> db
                                           :start-date
                                           time/parse-date
@@ -111,10 +112,10 @@
  (fn [{:keys [start-date orders] :as db} [_ day]]
    (let [day (or day start-date)
          days (into #{} (time/get-weeks day 2))
-         filtered-orders (->> orders vals (filter days))]
+         filtered-orders (->> orders vals (filter (comp days :day)) (group-by :day))]
      (assoc db
             :start-date day
-            :current-days (map #(vector % (get filtered-orders %)) days)))))
+            :current-days (map #(vector % (get filtered-orders %)) (sort days))))))
 
 (re-frame/reg-event-fx
  ::fetch-orders
@@ -152,7 +153,6 @@
 (re-frame/reg-event-fx
  ::process-stock
  (fn [{db :db} [_ {:keys [products customers orders]}]]
-   (prn products customers orders)
    {:db (-> db
             (assoc-if :products products)
             (assoc-if :customers customers)
@@ -181,6 +181,14 @@
  (fn [_ [_ products]]
    {:dispatch [::hide-modal :stock]
     (settings :http-dispatch) (http-request :post "products" :body products :on-sucess ::process-stock)}))
+
+;; Settings
+
+(re-frame/reg-event-fx
+ ::show-settings
+ (fn [{db :db} _]
+   {:db (assoc-in db [:settings :show] true)}))
+
 
 
 

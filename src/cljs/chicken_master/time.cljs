@@ -1,6 +1,8 @@
 (ns chicken-master.time
-  (:require [chicken-master.config :refer [settings]])
   (:import [goog.date DateTime Date Interval]))
+
+(def settings (atom settings))
+(defn update-settings [new-settings] (reset! settings new-settings))
 
 (defn today [] (new Date))
 
@@ -16,7 +18,7 @@
 (defn start-of-week
   "Get the start of the week for the given `date"
   [date]
-  (let [offset (mod (+ 7 (.getDay date) (- (settings :first-day-offset))) 7)]
+  (let [offset (mod (+ 7 (.getDay date) (- (get @settings :first-day-offset 0))) 7)]
     (date-offset date (- offset))))
 
 (defn days-range
@@ -35,10 +37,10 @@
 (defn today? "true when `d1` is today" [d1] (same-day? (js/Date.) d1))
 
 (defn format-date [date]
-  (when (settings :show-date)
-    (if (settings :show-day-name-with-date)
+  (when (get @settings :show-date)
+    (if (get @settings :show-day-name-with-date)
       (str
-       (->> date .getDay (nth (settings :day-names)))
+       (->> date .getDay (nth (get @settings :day-names)))
        " " (inc (.getMonth date)) "/" (.getDate date))
       (str (inc (.getMonth date)) "/" (.getDate date)))))
 

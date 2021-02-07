@@ -3,7 +3,6 @@
    [clojure.string :as str]
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
-   [chicken-master.config :refer [settings]]
    [chicken-master.html :as html]
    [chicken-master.subs :as subs]
    [chicken-master.events :as event]))
@@ -72,7 +71,7 @@
           products
           )))))
 
-(defn format-product [[product amount]]
+(defn format-product [settings [product amount]]
   [:div {:key (gensym) :class :product}
    [:span {:class :product-name} product]
    (if (settings :editable-number-inputs)

@@ -6,20 +6,34 @@
 (def debug?
   ^boolean goog.DEBUG)
 
-(def default-settings {:first-day-offset 1 ; which is the first day of the week (add the offset to `day-names`)
-                       :day-names ["Niedz" "Pon" "Wt" "Śr" "Czw" "Pt" "Sob"] ; how days should be displayed in the calendar view
-                       :calendar-heading false ; show a header with the names of days
-                       :show-date true ; display the date for each day
-                       :show-day-name-with-date true ; add the day name to each date
-                       :show-day-add-order true ; Show an add order button in each day
+(defn set-item!
+  "Set `key' in browser's localStorage to `val`."
+  [key val]
+  (.setItem (.-localStorage js/window) key val))
 
-                       :show-order-time false ; display the time of each order
-                       :show-order-notes true ; display notes
-                       :editable-number-inputs false ; only allow number modifications in the edit modal
-                       :hide-fulfilled-orders false
+(defn get-setting
+  "Returns value of `key' from browser's localStorage."
+  ([key]
+   (-> js/window (.-localStorage) (.getItem :settings) cljs.reader/read-string (get key)))
+  ([key default]
+   (if (nil? (get-setting key))
+     default
+     (get-setting key))))
 
-                       :http-dispatch :http;-xhrio
-                       :backend-url "http://localhost:3000/"
+(def default-settings {:first-day-offset (get-setting :first-day-offset 1) ; which is the first day of the week (add the offset to `day-names`)
+                       :day-names (get-setting :day-names ["Niedz" "Pon" "Wt" "Śr" "Czw" "Pt" "Sob"]) ; how days should be displayed in the calendar view
+                       :calendar-heading (get-setting :calendar-heading false) ; show a header with the names of days
+                       :show-date (get-setting :show-date true) ; display the date for each day
+                       :show-day-name-with-date (get-setting :show-day-name-with-date true) ; add the day name to each date
+                       :show-day-add-order (get-setting :show-day-add-order true) ; Show an add order button in each day
+
+                       :show-order-time (get-setting :show-order-time false) ; display the time of each order
+                       :show-order-notes (get-setting :show-order-notes true) ; display notes
+                       :editable-number-inputs (get-setting :editable-number-inputs false) ; only allow number modifications in the edit modal
+                       :hide-fulfilled-orders (get-setting :hide-fulfilled-orders false)
+
+                       :http-dispatch (get-setting :http-dispatch :http);-xhrio
+                       :backend-url (get-setting :backend-url "http://localhost:3000/")
                        })
 
 (defn- settings [key]
@@ -34,6 +48,8 @@
      (assoc db :settings settings))))
 
 (defn change-setting [key val]
+  (set-item! :settings (assoc (get-setting :settings) key val))
+  (prn (get-setting :settings))
   (re-frame/dispatch [::change-setting key val]))
 
 (defn input [id label opts]
@@ -75,4 +91,14 @@
     [:option {:value :http} "client side mock"]
     [:option {:value :http-xhrio} "re-frame-http-fx"]]
 
-   (input :backend-url "backend URL" {})])
+   (input :backend-url "backend URL" {})
+
+   [:button {:on-click #(re-frame/dispatch
+                         [:chicken-master.events/confirm-action
+                          "na pewno wyczyścić?"
+                          :chicken-master.events/clear-database])} "Wyczyść bazę"]
+   [:button {:on-click #(re-frame/dispatch
+                         [:chicken-master.events/confirm-action
+                          "na pewno nowe dane wygenerować?"
+                          :chicken-master.events/generate-database])} "Wygeneruj dane"]
+   ])

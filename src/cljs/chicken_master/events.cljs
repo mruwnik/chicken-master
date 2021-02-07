@@ -119,6 +119,7 @@
          days (into #{} (time/get-weeks day 2))
          filtered-orders (->> orders vals (filter (comp days :day)) (group-by :day))]
      (assoc db
+            :loading? nil
             :start-date day
             :current-days (map #(vector % (get filtered-orders %)) (sort days))))))
 
@@ -144,8 +145,9 @@
 (re-frame/reg-event-fx
  ::remove-customer
  (fn [_ [_ id]]
-   {(settings :http-dispatch) (http-request :delete (str "customers/" id)
-                                            :on-success ::process-stock)}))
+   {:dispatch [::start-loading]
+     (settings :http-dispatch) (http-request :delete (str "customers/" id)
+                                             :on-success ::process-stock)}))
 
 ;;; Storage events
 
@@ -197,13 +199,10 @@
 
 ;; Settings
 
-(re-frame/reg-event-fx
+(re-frame/reg-event-db
  ::show-settings
- (fn [{db :db} _]
-   {:db (assoc-in db [:settings :show] true)}))
-
-
-
+ (fn [db _]
+   (assoc-in db [:settings :show] true)))
 
 
 (comment
@@ -212,7 +211,19 @@
   )
 ;;;;;;;; Backend mocks
 
+(re-frame/reg-event-fx
+ ::clear-database
+ (fn [_ _]
+   (mocks/purge-items)
+   (.reload js/location)))
 
+(re-frame/reg-event-fx
+ ::generate-database
+ (fn [_ _]
+   (mocks/generate-items)
+   {:fx [[:dispatch [::start-loading]]
+         [:dispatch [::fetch-stock]]
+         [:dispatch [::fetch-orders]]]}))
 
 (re-frame/reg-fx
  :http

@@ -32,7 +32,13 @@
   (set-item! val (apply fun (get-item val) args))
   (get-item val))
 
+(defn purge-items []
+  (doseq [item [:stock-products :products :customers :orders :settings]]
+    (remove-item! item))
+  (set-item! :id-counter -1))
+
 (defn generate-items []
+  (set-item! :settings {})
   (set-item! :stock-products {:eggs 22 :milk 32 :cabbage 54 :carrots 11 :cows 32 :ants 21})
   (set-item! :id-counter -1)
 
@@ -60,8 +66,6 @@
                    flatten
                    (map #(vector (:id %) %))
                    (into {}))))
-(if-not (get-item :orders)
-  (generate-items))
 
 (defn fetch-customers [_]
   (get-item :customers))

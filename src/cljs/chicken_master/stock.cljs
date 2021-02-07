@@ -1,30 +1,33 @@
 (ns chicken-master.stock
   (:require
    [re-frame.core :as re-frame]
-   [chicken-master.config :refer [settings]]
+   [reagent.core :as reagent]
    [chicken-master.products :as prod]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]
    [chicken-master.events :as event]))
 
+(defn stock-form [stock]
+  (let [state (reagent/atom stock)]
+    (fn []
+      [:div
+       (for [[product amount] @state]
+         [:div {:key (gensym) :class :stock-product}
+          [:span {:class :product-name} product]
+          [:div {:class :stock-product-amount}
+           [:button {:type :button :on-click #(swap! state update product dec)} "-"]
+           (prod/number-input (name product) "" (or amount 0)
+                              #(swap! state assoc product (-> % .-target .-value prod/num-or-nil)))
+           [:button {:type :button :on-click #(swap! state update product inc)} "+"]
+           [:button {:type :button :on-click #(swap! state dissoc product)} "x"]]])
+       [prod/item-adder :callback #(swap! state assoc (keyword %) 0) :button "+"]])))
 
 (defn show-available []
   (html/modal
    :stock
    [:div {:class :stock-modal}
     [:h2 "Magazyn"]
-    (for [[product amount] @(re-frame/subscribe [::subs/available-products])]
-      [:div {:key (gensym) :class :stock-product}
-       [:span {:class :product-name} product]
-       [:div {:class :stock-product-amount}
-        [:button {:type :button :on-click #(re-frame/dispatch [::event/update-product-stock product -1])} "-"]
-        (prod/number-input (name product) "" (or amount 0)
-                      #(re-frame/dispatch [::event/set-stock-amount product (-> % .-target .-value prod/num-or-nil)]))
-        [:button {:type :button :on-click #(re-frame/dispatch [::event/update-product-stock product 1])} "+"]
-        [:button {:type :button :on-click #(re-frame/dispatch [::event/delete-product product])} "x"]
-        ]])
-    [prod/item-adder :callback #(re-frame/dispatch [::event/set-stock-amount % 0]) :button "+"]
-    ]
+    [stock-form @(re-frame/subscribe [::subs/available-products])]]
    ;; On success
    (fn [form]
      (->> form

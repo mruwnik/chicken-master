@@ -8,10 +8,6 @@
    [chicken-master.time :as time]))
 
 (defn format-raw-order [{:strs [who who-id notes] :as raw-values}]
-  (prn who who-id)
-  (prn (some->> @(re-frame/subscribe [::subs/available-customers])
-                (filter (comp #{who} :name))
-                first :id))
   {:who {:name who
          :id (if (prod/num-or-nil who-id)
                (prod/num-or-nil who-id)

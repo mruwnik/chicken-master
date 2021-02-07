@@ -12,7 +12,7 @@
 
 (defn http-request [method endpoint & {:keys [params body on-success on-failure]
                                        :or {on-success ::process-fetched-days
-                                            on-failure ::failed-blah}}]
+                                            on-failure ::failed-request}}]
   {:method method
    :uri (str (settings :backend-url) endpoint)
    :headers {"Content-Type" "application/edn"
@@ -22,7 +22,7 @@
    :params params
    :response-format (edn/edn-response-format)
    :on-success  [on-success]
-   :on-fail     [on-failure]})
+   :on-failure     [on-failure]})
 
 (defn http-get [endpoint params on-success]
   (http-request :get endpoint :params params :on-success on-success))
@@ -54,6 +54,15 @@
  ::remove-order
  (fn [_ [_ id]]
    {(settings :http-dispatch) (http-request :delete (str "orders/" id))}))
+
+(re-frame/reg-event-db
+ ::failed-request
+ (fn [db [_ response]]
+   (.error js/console (str response))
+   (js/alert "Wystąpił błąd")
+   (assoc db :loading false)))
+
+
 
 (re-frame/reg-event-fx
  ::move-order
@@ -171,24 +180,8 @@
             (assoc-if :products products)
             (assoc-if :customers customers)
             (assoc-if :orders orders))
-    :dispatch [::process-fetched-days (group-by :day (vals orders))]
+    :dispatch [::scroll-weeks 0]
     }))
-
-(re-frame/reg-event-db
- ::update-product-stock
- (fn [db [_ product i]]
-   (update-in db [:products product] + i)))
-
-(re-frame/reg-event-db
- ::set-stock-amount
- (fn [db [_ product i]]
-   (prn i)
-   (assoc-in db [:products product] i)))
-
-(re-frame/reg-event-db
- ::delete-product
- (fn [db [_ product]]
-   (update db :products dissoc product)))
 
 (re-frame/reg-event-fx
  ::save-stock

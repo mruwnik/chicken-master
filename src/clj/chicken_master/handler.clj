@@ -12,7 +12,7 @@
 (defn add-customer [request] {:body (some-> request :body :name mocks/add-customer)})
 (defn delete-customer [id] {:body (mocks/delete-customer (edn/read-string id))})
 
-(defn get-products [_] (prn _){:body (mocks/get-all-products)})
+(defn get-products [_] {:body (mocks/get-all-products)})
 (defn save-products [request] {:body (some-> request :body mocks/save-stocks)})
 
 (defn get-orders [params] {:body {:orders (mocks/get-orders params)}})
@@ -22,7 +22,7 @@
     {:body (mocks/replace-order id body)}))
 
 (defn delete-order [id] {:body (mocks/delete-order (edn/read-string id))})
-(defn set-order-state [id status] (prn "asd"){:body (mocks/order-state (edn/read-string id) status)})
+(defn set-order-state [id status] {:body (mocks/order-state (edn/read-string id) status)})
 
 (defn get-stock [params]
   {:body

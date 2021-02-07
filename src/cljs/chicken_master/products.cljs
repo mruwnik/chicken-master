@@ -40,31 +40,30 @@
     [:div {:class :product-item-edit :key (gensym)}
      [:div {:class :input-item}
       ;; [:label {:for :product} "co"]
-      [:select {:name (str "product-" id) :id :product :defaultValue what
+      [:select {:name (str "product-" id) :id :product :defaultValue (some-> what name)
                 :on-change #(let [prod (-> % .-target .-value keyword)]
-                              (swap! state assoc prod (+ (@state prod) (@state what)))
+                              (if-not (= prod :-)
+                                (swap! state assoc prod (+ (@state prod) (@state what))))
                               (swap! state dissoc what)
-                              (if (not (contains? @state nil))
-                                (swap! state assoc nil 0))
                               )}
-       [:option {:value ""} "-"]
-       (for [[product _] available]
-         [:option {:key (gensym) :value product} (name product)])]
+       (for [product (-> available (conj what) sort vec (conj nil))]
+         [:option {:key (gensym) :value product} (if product (name product) "-")])]
       ]
      (number-input (str "amount-" id) nil (@state what)
-                   #(do (swap! state assoc what (-> % .-target .-value num-or-nil))
-                        (prn @state)))
+                   #(swap! state assoc what (-> % .-target .-value num-or-nil)))
      ]))
 
 (defn products-edit [selected-prods & {:keys [available-prods getter-fn]
                                        :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
-  (let [state (reagent/atom (assoc selected-prods nil 0))]
+  (let [state (reagent/atom (or selected-prods {}))]
     (fn []
-      (let [products (->> @state
+      (let [available (remove (partial get @state) (keys available-prods))
+            products (->> @state
                           keys
                           sort
-                          (map (partial product-item available-prods state))
-                          (into [:div {:class :product-items-edit}]))]
+                          (map (partial product-item available state))
+                          (into [:div {:class :product-items-edit}]))
+            products (conj products (product-item available state nil))]
         (if getter-fn
           (conj products
                 [:button {:type :button

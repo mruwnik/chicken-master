@@ -39,7 +39,6 @@
 (defn- settings [key]
   (get @(re-frame/subscribe [::subs/settings]) key))
 
-
 (re-frame/reg-event-db
  ::change-setting
  (fn [{settings :settings :as db} [_ key val]]
@@ -49,7 +48,6 @@
 
 (defn change-setting [key val]
   (set-item! :settings (assoc (get-setting :settings) key val))
-  (prn (get-setting :settings))
   (re-frame/dispatch [::change-setting key val]))
 
 (defn input [id label opts]
@@ -86,7 +84,7 @@
 
    [:h3 "Ustawienia tyłu"]
    [:label {:for :http-dispatch} "re-frame http dispatcher"]
-   [:select {:id :http-dispatch :name :http-dispatch
+   [:select {:id :http-dispatch :name :http-dispatch :value (settings :http-dispatch)
              :on-change #(change-setting :http-dispatch (-> % .-target .-value keyword))}
     [:option {:value :http} "client side mock"]
     [:option {:value :http-xhrio} "re-frame-http-fx"]]

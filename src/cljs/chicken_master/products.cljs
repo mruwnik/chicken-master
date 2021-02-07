@@ -62,6 +62,7 @@
     (fn []
       (let [products (->> @state
                           keys
+                          sort
                           (map (partial product-item available-prods state))
                           (into [:div {:class :product-items-edit}]))]
         (if getter-fn

@@ -62,6 +62,10 @@
                          :name customer-name})
   (fetch-stock {}))
 
+(defn delete-customer [id]
+  {:orders (swap! orders #(->> % (remove (comp #{id} :id :who second)) (into {})))
+   :customers (swap! customers (partial remove (comp #{id} :id)))})
+
 (defn day-customers [day] [day (->> @orders vals (filter (comp #{day} :day)))])
 
 (defn get-orders [params] @orders)

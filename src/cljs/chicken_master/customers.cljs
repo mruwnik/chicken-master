@@ -33,7 +33,10 @@
                              (group-by #(get-in % [:who :id])))]
       (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
         [:details {:class "client" :key (gensym)}
-         [:summary name]
+         [:summary [:span name [:button {:on-click #(re-frame/dispatch
+                                                     [::event/confirm-action
+                                                      "na pewno usunąć?"
+                                                      ::event/remove-customer id])} "-"]]]
          [order-adder {:who who}]
          (for [order (reverse (sort-by :day (client-orders id)))]
             [order-adder (assoc order :key (gensym))])

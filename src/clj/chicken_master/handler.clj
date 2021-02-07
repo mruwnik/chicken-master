@@ -10,6 +10,7 @@
 
 (defn get-customers [] {:body (mocks/fetch-customers {})})
 (defn add-customer [request] {:body (some-> request :body :name mocks/add-customer)})
+(defn delete-customer [id] {:body (mocks/delete-customer (edn/read-string id))})
 
 (defn get-products [_] (prn _){:body (mocks/get-all-products)})
 (defn save-products [request] {:body (some-> request :body mocks/save-stocks)})
@@ -32,6 +33,7 @@
   (GET "/stock" {params :query-params} (get-stock params))
   (GET "/customers" [] (get-customers))
   (POST "/customers" request (add-customer request))
+  (DELETE "/customers/:id" [id] (delete-customer id))
 
   (GET "/products" request (get-products request))
   (POST "/products" request (save-products request))

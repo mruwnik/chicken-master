@@ -1,10 +1,31 @@
 (ns chicken-master.css
   (:require [garden.def :refer [defstyles]]
-            [garden.stylesheet :refer [at-media]]))
+            [garden.stylesheet :refer [at-media at-keyframes]]))
 
 (defstyles screen
+  (at-keyframes "spin"
+                [:0% {:transform "rotate(0deg)"}]
+                [:100% {:transform "rotate(360deg)"}])
+
   [:html {:height "100%"}
    [:body {:height "100%"}
+    [:.hidden {:display :none}]
+    [:.loader-container {:position :absolute
+                         :width "100%"
+                         :height "100%"
+                         :z-index 1000
+                         :background-color "rgba(0,0,0,0.4)"
+                         }
+     [:.loader {:margin :auto
+                :position :relative
+                :top "40%"
+                :border "5px solid #f3f3f3"; /* Light grey */
+                :border-top "5px solid #3498db"; /* Blue */
+                :border-radius "50%";
+                :width "30px"
+                :height "30px"
+                :animation "spin 1s linear infinite"}]]
+
     [:.full-height {:height "100%"}]
 
     [:.scroll-bar {:position :absolute

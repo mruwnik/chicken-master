@@ -8,7 +8,18 @@
    [chicken-master.time :as time]))
 
 (defn format-raw-order [{:strs [who who-id notes] :as raw-values}]
-  {:who {:name who :id (prod/num-or-nil who-id)}
+  (prn who who-id)
+  (prn (some->> @(re-frame/subscribe [::subs/available-customers])
+                (filter (comp #{who} :name))
+                first :id))
+  {:who {:name who
+         :id (if (prod/num-or-nil who-id)
+               (prod/num-or-nil who-id)
+               ;; seeing as there's an autocomplete thingy, assume that if the name is the same,
+               ;; then so is the user
+               (some->> @(re-frame/subscribe [::subs/available-customers])
+                    (filter (comp #{who} :name))
+                    first :id))}
    :notes notes
    :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
@@ -16,9 +27,12 @@
   (html/modal
    :order-edit
    [:div
-    (let [who @(re-frame/subscribe [::subs/order-edit-who])]
+    (let [who @(re-frame/subscribe [::subs/order-edit-who])
+          customers @(re-frame/subscribe [::subs/available-customers])]
       [:div
-       (html/input :who "kto" {:required true :default (:name who)})
+       (html/input :who "kto" {:required true :default (:name who) :list :customers})
+       (into [:datalist {:id :customers}]
+             (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
        [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]])
     (html/input :notes "notka"
            {:default @(re-frame/subscribe [::subs/order-edit-notes])})

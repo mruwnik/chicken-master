@@ -3,6 +3,7 @@
 
 (re-frame/reg-sub ::name (fn [db] (:name db)))
 (re-frame/reg-sub ::settings (fn [db] (:settings db)))
+(re-frame/reg-sub ::loading? (fn [db] (:loading? db)))
 
 (re-frame/reg-sub ::available-products (fn [db] (:products db)))
 (re-frame/reg-sub ::available-customers (fn [db] (:customers db)))

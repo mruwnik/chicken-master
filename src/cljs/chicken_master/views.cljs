@@ -14,6 +14,8 @@
 
 (defn main-panel []
   [:div {:class :full-height}
+   [:div {:class [:loader-container (if-not @(re-frame/subscribe [::subs/loading?]) :hidden)]}
+    [:div {:class :loader}]]
    (cond
      @(re-frame/subscribe [::subs/show-stock-modal]) (stock/show-available)
      @(re-frame/subscribe [::subs/show-settings-modal]) (show-settings)

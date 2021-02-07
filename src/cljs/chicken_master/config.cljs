@@ -11,7 +11,7 @@
                        :calendar-heading false ; show a header with the names of days
                        :show-date true ; display the date for each day
                        :show-day-name-with-date true ; add the day name to each date
-                       :show-day-add-order false ; Show an add order button in each day
+                       :show-day-add-order true ; Show an add order button in each day
 
                        :show-order-time false ; display the time of each order
                        :show-order-notes true ; display notes

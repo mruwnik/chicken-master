@@ -36,10 +36,13 @@
    (time/update-settings default-settings)
    {:db (assoc db/default-db :settings default-settings)
     :fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
+         [:dispatch [::start-loading]]
          [:dispatch [::fetch-stock]]
          [:dispatch [::fetch-orders]]]}))
 
 (re-frame/reg-event-db ::hide-modal (fn [db [_ modal]] (assoc-in db [modal :show] nil)))
+(re-frame/reg-event-db ::start-loading (fn [db _] (assoc db :loading? true)))
+(re-frame/reg-event-db ::stop-loading (fn [db _] (assoc db :loading? nil)))
 
 (re-frame/reg-event-fx
  ::confirm-action
@@ -92,6 +95,7 @@
  ::process-fetched-days
  (fn [db [_ days]]
    (-> db
+       (assoc :loading? nil)
        (update :current-days #(map (fn [[day orders]]
                                      [day (if (contains? days day)
                                             (days day) orders)]) %))
@@ -101,6 +105,7 @@
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
    {:fx [;[:dispatch [::fetch-stock]]
+         [:dispatch [::start-loading]]
          [:dispatch [::show-from-date (-> db
                                           :start-date
                                           time/parse-date
@@ -120,7 +125,8 @@
 (re-frame/reg-event-fx
  ::fetch-orders
  (fn [_ [_ from to]]
-   {(settings :http-dispatch) (http-get "orders" {} ::process-stock)}))
+   {:dispatch [::start-loading]
+    (settings :http-dispatch) (http-get "orders" {} ::process-stock)}))
 
 ;; Customers events
 (re-frame/reg-event-fx
@@ -135,6 +141,11 @@
    {(settings :http-dispatch) (http-request :post "customers"
                                             :body {:name customer-name}
                                             :on-success ::process-stock)}))
+(re-frame/reg-event-fx
+ ::remove-customer
+ (fn [_ [_ id]]
+   {(settings :http-dispatch) (http-request :delete (str "customers/" id)
+                                            :on-success ::process-stock)}))
 
 ;;; Storage events
 
@@ -147,7 +158,8 @@
 (re-frame/reg-event-fx
  ::fetch-stock
  (fn [_ _]
-   {(settings :http-dispatch) (http-get "stock" {} ::process-stock)}))
+   {:dispatch [::start-loading]
+    (settings :http-dispatch) (http-get "stock" {} ::process-stock)}))
 
 (defn assoc-if [coll key val] (if val (assoc coll key val) coll))
 (re-frame/reg-event-fx
@@ -179,7 +191,8 @@
 (re-frame/reg-event-fx
  ::save-stock
  (fn [_ [_ products]]
-   {:dispatch [::hide-modal :stock]
+   {:fx [[:dispatch [::hide-modal :stock]]
+         [:dispatch [::start-loading]]]
     (settings :http-dispatch) (http-request :post "products" :body products :on-sucess ::process-stock)}))
 
 ;; Settings
@@ -221,9 +234,11 @@
          (and (= method :post) (= uri "http://localhost:3000/products"))
          (re-frame/dispatch (conj on-success (mocks/save-stocks (cljs.reader/read-string body))))
 
-         (= method :delete)
+         (and (= method :delete) (= (nth parts 3) "orders"))
          (re-frame/dispatch (conj on-success (mocks/delete-order (-> parts (nth 4) (js/parseInt)))))
 
+         (and (= method :delete) (= (nth parts 3) "customers"))
+         (re-frame/dispatch (conj on-success (mocks/delete-customer (-> parts (nth 4) (js/parseInt)))))
 
          (and (= method :post) (= uri "http://localhost:3000/customers"))
          (re-frame/dispatch (conj on-success (mocks/add-customer (cljs.reader/read-string body))))

@@ -12,6 +12,8 @@
                  [ns-tracker "0.4.0"]
                  [compojure "1.6.2"]
                  [yogthos/config "1.1.7"]
+                 [seancorfield/next.jdbc "1.1.613"]
+                 [org.postgresql/postgresql "42.2.6"]
                  [ring-basic-authentication "1.1.0"]
                  [ring-cors "0.1.13"]
                  [ring "1.8.1"]]

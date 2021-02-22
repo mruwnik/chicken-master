@@ -53,7 +53,7 @@
 (re-frame/reg-event-fx
  ::remove-order
  (fn [_ [_ id]]
-   {(settings :http-dispatch) (http-request :delete (str "orders/" id))}))
+   {:http-xhrio (http-request :delete (str "orders/" id))}))
 
 (re-frame/reg-event-db
  ::failed-request
@@ -67,7 +67,7 @@
 (re-frame/reg-event-fx
  ::move-order
  (fn [{{orders :orders start-date :start-date} :db} [_ id day]]
-   {(settings :http-dispatch)
+   {:http-xhrio
     (http-request :put (str "orders/" id)
                   :body (-> id orders (assoc :day day :start-from start-date)))}))
 
@@ -83,38 +83,44 @@
  ::fulfill-order
  (fn [{db :db} [_ id]]
    {:db (assoc-in db [:orders id :state] :pending)
-    (settings :http-dispatch) (http-request :post (str "orders/" id "/fulfilled"))}))
+    :http-xhrio (http-request :post (str "orders/" id "/fulfilled"))}))
 
 (re-frame/reg-event-fx
  ::reset-order
  (fn [{db :db} [_ id]]
    {:db (assoc-in db [:orders id :state] :waiting)
-    (settings :http-dispatch) (http-request :post (str "orders/" id "/waiting"))}))
+    :http-xhrio (http-request :post (str "orders/" id "/waiting"))}))
 
 (re-frame/reg-event-fx
  ::save-order
  (fn [{{order :order-edit} :db} [_ form]]
    {:dispatch [::hide-modal :order-edit]
-    (settings :http-dispatch) (http-post (str "orders")
+    :http-xhrio (http-post (str "orders")
                                          (merge
                                           (select-keys order [:id :day :hour :state])
                                           (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
 (re-frame/reg-event-db
  ::process-fetched-days
- (fn [db [_ days]]
+ (fn [db [_ orders]]
+   (prn orders)
+   (prn (:current-days db))
+   (prn
+     (let [days (group-by :day orders)]
+       (for [[day orders] (:current-days db)]
+         [day (if (contains? days day) (days day) orders)])))
    (-> db
        (assoc :loading? nil)
-       (update :current-days #(map (fn [[day orders]]
-                                     [day (if (contains? days day)
-                                            (days day) orders)]) %))
-       (update :orders #(reduce (fn [m cust] (assoc m (:id cust) cust)) % (-> days vals flatten))))))
+       (update :current-days (fn [current-days]
+                               (let [days (group-by :day orders)]
+                                 (for [[day orders] current-days]
+                                   [day (if (contains? days day) (days day) orders)]))))
+       (update :orders #(reduce (fn [m cust] (assoc m (:id cust) cust)) % orders)))))
 
 (re-frame/reg-event-fx
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
-   {:fx [;[:dispatch [::fetch-stock]]
-         [:dispatch [::start-loading]]
+   {:fx [[:dispatch [::start-loading]]
          [:dispatch [::show-from-date (-> db
                                           :start-date
                                           time/parse-date
@@ -136,7 +142,7 @@
  ::fetch-orders
  (fn [_ [_ from to]]
    {:dispatch [::start-loading]
-    (settings :http-dispatch) (http-get "orders" {} ::process-stock)}))
+    :http-xhrio (http-get "orders" {} ::process-stock)}))
 
 ;; Customers events
 (re-frame/reg-event-fx
@@ -148,14 +154,14 @@
 (re-frame/reg-event-fx
  ::add-customer
  (fn [_ [_ customer-name]]
-   {(settings :http-dispatch) (http-request :post "customers"
+   {:http-xhrio (http-request :post "customers"
                                             :body {:name customer-name}
                                             :on-success ::process-stock)}))
 (re-frame/reg-event-fx
  ::remove-customer
  (fn [_ [_ id]]
    {:dispatch [::start-loading]
-     (settings :http-dispatch) (http-request :delete (str "customers/" id)
+     :http-xhrio (http-request :delete (str "customers/" id)
                                              :on-success ::process-stock)}))
 
 ;;; Storage events
@@ -170,7 +176,7 @@
  ::fetch-stock
  (fn [_ _]
    {:dispatch [::start-loading]
-    (settings :http-dispatch) (http-get "stock" {} ::process-stock)}))
+    :http-xhrio (http-get "stock" {} ::process-stock)}))
 
 (defn assoc-if [coll key val] (if val (assoc coll key val) coll))
 (re-frame/reg-event-fx
@@ -179,7 +185,7 @@
    {:db (-> db
             (assoc-if :products products)
             (assoc-if :customers customers)
-            (assoc-if :orders orders))
+            (assoc-if :orders (some->> orders (into {} (map #(vector (:id %) %))))))
     :dispatch [::scroll-weeks 0]
     }))
 
@@ -188,7 +194,7 @@
  (fn [_ [_ products]]
    {:fx [[:dispatch [::hide-modal :stock]]
          [:dispatch [::start-loading]]]
-    (settings :http-dispatch) (http-request :post "products" :body products :on-sucess ::process-stock)}))
+    :http-xhrio (http-request :post "products" :body products :on-sucess ::process-stock)}))
 
 ;; Settings
 
@@ -217,38 +223,3 @@
    {:fx [[:dispatch [::start-loading]]
          [:dispatch [::fetch-stock]]
          [:dispatch [::fetch-orders]]]}))
-
-(re-frame/reg-fx
- :http
- (fn [{:keys [method uri params body on-success on-fail]}]
-   (condp = uri
-     "http://localhost:3000/stock" (re-frame/dispatch (conj on-success (mocks/fetch-stock params)))
-
-     "get-customers" (re-frame/dispatch (conj on-success (mocks/fetch-customers params)))
-     "add-customer" (re-frame/dispatch (conj on-success (mocks/add-customer params)))
-     "save-stock" (re-frame/dispatch (conj on-success (mocks/save-stocks body)))
-     (let [parts (clojure.string/split uri "/")]
-       (cond
-         (and (= method :get) (= uri "http://localhost:3000/orders"))
-         (re-frame/dispatch (conj on-success (mocks/fetch-orders params)))
-
-         (and (= method :post) (= uri "http://localhost:3000/orders"))
-         (re-frame/dispatch (conj on-success (mocks/replace-order nil (cljs.reader/read-string body))))
-
-         (and (= method :post) (= uri "http://localhost:3000/products"))
-         (re-frame/dispatch (conj on-success (mocks/save-stocks (cljs.reader/read-string body))))
-
-         (and (= method :delete) (= (nth parts 3) "orders"))
-         (re-frame/dispatch (conj on-success (mocks/delete-order (-> parts (nth 4) (js/parseInt)))))
-
-         (and (= method :delete) (= (nth parts 3) "customers"))
-         (re-frame/dispatch (conj on-success (mocks/delete-customer (-> parts (nth 4) (js/parseInt)))))
-
-         (and (= method :post) (= uri "http://localhost:3000/customers"))
-         (re-frame/dispatch (conj on-success (mocks/add-customer (cljs.reader/read-string body))))
-
-         (-> parts last #{"fulfilled" "waiting"})
-         (re-frame/dispatch (conj on-success (mocks/order-state {:id (-> parts (nth 4) (js/parseInt)) :state (keyword (last parts))})))
-         true (prn "unhandled" method uri)
-       ))
-   )))

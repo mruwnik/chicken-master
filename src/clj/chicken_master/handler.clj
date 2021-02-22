@@ -1,5 +1,9 @@
 (ns chicken-master.handler
   (:require [chicken-master.mocks :as mocks]
+            [chicken-master.db :as db]
+            [chicken-master.orders :as orders]
+            [chicken-master.customers :as customers]
+            [chicken-master.products :as products]
             [clojure.edn :as edn]
             [compojure.core :refer [GET POST PUT DELETE defroutes]]
             [compojure.route :refer [resources]]
@@ -8,21 +12,21 @@
             [ring.middleware.basic-authentication :refer [wrap-basic-authentication]]
             [ring.middleware.cors :refer [wrap-cors]]))
 
-(defn get-customers [] {:body (mocks/fetch-customers {})})
-(defn add-customer [request] {:body (some-> request :body :name mocks/add-customer)})
-(defn delete-customer [id] {:body (mocks/delete-customer (edn/read-string id))})
+(defn get-customers [] {:body (customers/get-all)})
+(defn add-customer [request] {:body (some-> request :body :name customers/create!)})
+(defn delete-customer [id] {:body (customers/delete! (edn/read-string id))})
 
-(defn get-products [_] {:body (mocks/get-all-products)})
-(defn save-products [request] {:body (some-> request :body mocks/save-stocks)})
+(defn get-products [_] {:body (products/get-all)})
+(defn save-products [request] {:body (some-> request :body products/update!)})
 
-(defn get-orders [params] {:body {:orders (mocks/get-orders params)}})
+(defn get-orders [params] {:body {:orders (orders/get-all)}})
 (defn update-order [request]
   (let [id (some-> request :route-params :id (Integer/parseInt))
-        body (some->> request :body)]
-    {:body (mocks/replace-order id body)}))
+        order (-> request :body (update :id #(or % id)))]
+    {:body (orders/replace! order)}))
 
-(defn delete-order [id] {:body (mocks/delete-order (edn/read-string id))})
-(defn set-order-state [id status] {:body (mocks/order-state (edn/read-string id) status)})
+(defn delete-order [id] {:body (orders/delete! (edn/read-string id))})
+(defn set-order-state [id status] {:body (orders/change-state! (edn/read-string id) status)})
 
 (defn get-stock [params]
   {:body
@@ -49,7 +53,7 @@
 
 
 (defn- handle-edn [response]
-  (if (string? (:body response))
+  (if (-> response :body type #{java.io.File java.lang.String})
     response
     (-> response
         (assoc-in [:headers "Content-Type"] "application/edn")
@@ -71,8 +75,7 @@
         request)))))
 
 (defn authenticated? [name pass]
-  (and (= name "siloa")
-       (= pass "krach")))
+  (db/valid-user? name pass))
 
 (def handler (-> routes
                  (wrap-basic-authentication authenticated?)

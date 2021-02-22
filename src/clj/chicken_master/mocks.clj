@@ -71,6 +71,8 @@
 (defn get-orders [params] @orders)
 
 (defn replace-order [id order]
+  (prn id)
+  (prn order)
   (println "replacing order" order)
   (let [prev-day (:day (@orders (:id order)))
         order (update order :id #(or % (swap! id-counter inc)))]

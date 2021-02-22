@@ -4,6 +4,8 @@
 * daily view
 * infinite scroll
 
+* Move to different day
+
 * handle regular customers
 ** every n days
 ** copy over to next week
@@ -12,6 +14,10 @@
 * settings menu
 
 * products CRM
+
+## Start
+
+    docker run --name some-postgres -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
 
 
 A [re-frame](https://github.com/day8/re-frame) application designed to ... well, that part is up to

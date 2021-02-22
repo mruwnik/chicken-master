@@ -32,7 +32,6 @@
                        :editable-number-inputs (get-setting :editable-number-inputs false) ; only allow number modifications in the edit modal
                        :hide-fulfilled-orders (get-setting :hide-fulfilled-orders false)
 
-                       :http-dispatch (get-setting :http-dispatch :http);-xhrio
                        :backend-url (get-setting :backend-url "http://localhost:3000/")
                        })
 
@@ -83,12 +82,6 @@
    (input :hide-fulfilled-orders "ukryj wydane zamówienia" {:type :checkbox})
 
    [:h3 "Ustawienia tyłu"]
-   [:label {:for :http-dispatch} "re-frame http dispatcher"]
-   [:select {:id :http-dispatch :name :http-dispatch :value (settings :http-dispatch)
-             :on-change #(change-setting :http-dispatch (-> % .-target .-value keyword))}
-    [:option {:value :http} "client side mock"]
-    [:option {:value :http-xhrio} "re-frame-http-fx"]]
-
    (input :backend-url "backend URL" {})
 
    [:button {:on-click #(re-frame/dispatch

@@ -6,14 +6,15 @@
             [chicken-master.products :as products]
             [chicken-master.time :as t]))
 
-(defn- upsert-order! [tx user-id {:keys [id day state notes]}]
-  (let [order {:customer_id user-id
+(defn- upsert-order! [tx user-id customer-id {:keys [id day state notes]}]
+  (let [order {:customer_id customer-id
                :notes notes
                :status (some-> state name jdbc.types/as-other)
                :order_date (some-> day t/parse-date t/inst->timestamp)}]
-    (if id
+    (if (db/get-by-id tx user-id :orders id)
       (do (sql/update! tx :orders order {:id id}) id)
-      (:orders/id (sql/insert! tx :orders order)))))
+      (:orders/id (sql/insert! tx :orders (assoc order :user_id user-id))))))
+
 
 (defn- structure-order [items]
   {:id    (-> items first :orders/id)
@@ -39,32 +40,35 @@
        vals
        (map structure-order)))
 
-(defn get-order [tx id]
-  (first (get-orders tx "WHERE o.id = ?" [id])))
+(defn get-order [tx user-id id]
+  (first (get-orders tx "WHERE o.id = ? AND o.user_id = ?" [id user-id])))
 
-(defn get-all [] (get-orders db/db-uri nil []))
+(defn get-all [user-id] (get-orders db/db-uri "WHERE o.user_id = ?" [user-id]))
 
-(defn- orders-for-days [tx & days]
+(defn- orders-for-days [tx user-id & days]
   (let [days (remove nil? days)]
     (->> days
          (map t/inst->timestamp)
          (map jdbc.types/as-date)
-         (get-orders tx (str "WHERE o.order_date::date IN " (db/psql-list days))))))
+         (into [user-id])
+         (get-orders tx (str "WHERE o.user_id = ? AND o.order_date::date IN " (db/psql-list days))))))
 
-(defn- orders-between [tx from to]
+(defn- orders-between [tx user-id from to]
   (get-orders
    tx
-   "WHERE o.order_date::date >= ? AND o.order_date::date <= ?"
+   "WHERE o.order_date::date >= ? AND o.order_date::date <= ? AND o.user_id = ?"
    [(some-> from t/inst->timestamp jdbc.types/as-date)
-    (some-> to t/inst->timestamp jdbc.types/as-date)]))
+    (some-> to t/inst->timestamp jdbc.types/as-date)
+    user-id]))
 
-(defn replace! [{:keys [who products] :as order}]
+(defn replace! [user-id {:keys [who products] :as order}]
+  (prn order)
   (jdbc/with-transaction [tx db/db-uri]
-    (let [user-id (or (:id who)
-                      (:customers/id (sql/get-by-id tx :customers (:name who) :name {})))
+    (let [customer-id (or (:id who)
+                      (:customers/id (db/get-by-id tx user-id :customers (:name who) :name)))
           products-map (products/products-map tx products)
-          previous-day (some->> order :id (sql/get-by-id tx :orders) :orders/order_date (.toInstant))
-          order-id (upsert-order! tx user-id order)]
+          previous-day (some->> order :id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))
+          order-id (upsert-order! tx user-id customer-id order)]
       (sql/delete! tx :order_products {:order_id order-id})
       (sql/insert-multi! tx :order_products
                          [:order_id :product_id :amount]
@@ -72,21 +76,21 @@
                                :let [product-id (-> n name products-map)]
                                :when product-id]
                            [order-id product-id amount]))
-      (orders-for-days tx previous-day (some-> order :day t/parse-date)))))
+      (orders-for-days tx user-id previous-day (some-> order :day t/parse-date)))))
 
-(defn delete! [id]
+(defn delete! [user-id id]
   (jdbc/with-transaction [tx db/db-uri]
-    (let [day (some->> id (sql/get-by-id tx :orders) :orders/order_date (.toInstant))]
-      (sql/delete! tx :orders {:id id})
-      (when day (orders-for-days tx day)))))
+    (let [day (some->> id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))]
+      (sql/delete! tx :orders {:id id :user_id user-id})
+      (when day (orders-for-days tx user-id day)))))
 
 (defn change-state!
   "Update the state of the given order and also modify the number of products available:
   * when `fulfilled` decrement the number of products
   * when `waiting` increment the number (as this means a previously fulfilled order has been returned)"
-  [id state]
+  [user-id id state]
   (jdbc/with-transaction [tx db/db-uri]
-    (let [order (get-order tx id)
+    (let [order (get-order tx user-id id)
           operator (condp = state
                      "fulfilled" "-"
                      "waiting"   "+")]
@@ -96,4 +100,4 @@
                              [(str "UPDATE products SET amount = amount " operator " ? WHERE name = ?")
                               amount (name prod)]))
         (sql/update! tx :orders {:status (jdbc.types/as-other state)} {:id id}))
-      (orders-for-days tx (-> order :day t/parse-date)))))
+      (orders-for-days tx user-id (-> order :day t/parse-date)))))

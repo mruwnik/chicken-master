@@ -15,9 +15,15 @@
    ["INSERT INTO users (name, password) VALUES (?, crypt(?, gen_salt('bf')))" name passwd]))
 
 (defn valid-user? [name passwd]
-  (jdbc/execute-one!
-   db-uri
-   [" SELECT * FROM users WHERE name = ? AND password = crypt(?, password)" name passwd]))
+  (:users/id (jdbc/execute-one!
+              db-uri
+              ["SELECT * FROM users WHERE name = ? AND password = crypt(?, password)" name passwd])))
+
+(defn get-by-id
+  ([tx user-id table id] (get-by-id tx user-id table id :id))
+  ([tx user-id table id id-column]
+   (jdbc/execute-one! tx [(str "SELECT * from " (name table) " WHERE " (name id-column) " = ? AND user_id = ?")
+                          id user-id])))
 
 (comment
   (create-user "siloa" "krach")

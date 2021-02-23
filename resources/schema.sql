@@ -9,22 +9,24 @@ CREATE TABLE users (
 
 CREATE TABLE customers (
   id SERIAL,
-  name VARCHAR(512) UNIQUE,
+  name VARCHAR(512),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted BOOLEAN,
   user_id INT,
   PRIMARY KEY(id),
+  UNIQUE(name, user_id),
   CONSTRAINT fk_users FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
 CREATE TABLE products (
   id SERIAL,
-  name VARCHAR(512) UNIQUE,
+  name VARCHAR(512),
   amount NUMERIC,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted BOOLEAN,
   user_id INT,
   PRIMARY KEY(id),
+  UNIQUE(name, user_id),
   CONSTRAINT fk_users FOREIGN KEY(user_id) REFERENCES users(id)
 );
 

@@ -4,17 +4,17 @@
             [chicken-master.db :as db]
             [chicken-master.orders :as orders]))
 
-(defn get-all []
-  (->> (sql/query db/db-uri ["select * from customers where deleted is null"])
+(defn get-all [user-id]
+  (->> (sql/query db/db-uri ["select * from customers where deleted is null AND user_id = ?" user-id])
        (map (fn [{:customers/keys [id name]}] {:id id :name name}))))
 
-(defn create! [name]
+(defn create! [user-id name]
   (jdbc/execute! db/db-uri
-                 ["INSERT INTO customers (name) VALUES(?) ON CONFLICT (name) DO UPDATE SET deleted = NULL"
-                  name])
-  {:customers (get-all)})
+                 ["INSERT INTO customers (name, user_id) VALUES(?, ?) ON CONFLICT (name, user_id) DO UPDATE SET deleted = NULL"
+                  name user-id])
+  {:customers (get-all user-id)})
 
-(defn delete! [id]
-  (sql/update! db/db-uri :customers {:deleted true} {:id id})
-  {:orders (orders/get-all)
-   :customers (get-all)})
+(defn delete! [user-id id]
+  (sql/update! db/db-uri :customers {:deleted true} {:id id :user_id user-id})
+  {:orders (orders/get-all user-id)
+   :customers (get-all user-id)})

@@ -5,10 +5,7 @@
    [chicken-master.time :as time]
    [chicken-master.config :refer [settings default-settings]]
    [day8.re-frame.http-fx]
-   [ajax.edn :as edn]
-
-   ;; required for http mocks
-   [chicken-master.backend-mocks :as mocks]))
+   [ajax.edn :as edn]))
 
 (defn http-request [method endpoint & {:keys [params body on-success on-failure]
                                        :or {on-success ::process-fetched-days
@@ -60,9 +57,7 @@
  (fn [db [_ response]]
    (.error js/console (str response))
    (js/alert "Wystąpił błąd")
-   (assoc db :loading false)))
-
-
+   (assoc db :loading? false)))
 
 (re-frame/reg-event-fx
  ::move-order
@@ -103,12 +98,6 @@
 (re-frame/reg-event-db
  ::process-fetched-days
  (fn [db [_ orders]]
-   (prn orders)
-   (prn (:current-days db))
-   (prn
-     (let [days (group-by :day orders)]
-       (for [[day orders] (:current-days db)]
-         [day (if (contains? days day) (days day) orders)])))
    (-> db
        (assoc :loading? nil)
        (update :current-days (fn [current-days]
@@ -208,18 +197,3 @@
   (re-frame/dispatch-sync [::show-stock])
   (re-frame/dispatch-sync [::update-product-stock :eggs 2])
   )
-;;;;;;;; Backend mocks
-
-(re-frame/reg-event-fx
- ::clear-database
- (fn [_ _]
-   (mocks/purge-items)
-   (.reload js/location)))
-
-(re-frame/reg-event-fx
- ::generate-database
- (fn [_ _]
-   (mocks/generate-items)
-   {:fx [[:dispatch [::start-loading]]
-         [:dispatch [::fetch-stock]]
-         [:dispatch [::fetch-orders]]]}))

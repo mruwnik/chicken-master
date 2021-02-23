@@ -1,11 +1,9 @@
 (ns chicken-master.db
   (:require [clojure.string :as str]
-            [next.jdbc :as jdbc]
-            [next.jdbc.types :as jdbc.types]
-            [next.jdbc.sql :as sql]
-            [chicken-master.time :as t]))
+            [config.core :refer [env]]
+            [next.jdbc :as jdbc]))
 
-(def db-uri {:jdbcUrl (or (System/getenv "DB_URI") "jdbc:postgresql://localhost/postgres?user=postgres&password=mysecretpassword")})
+(def db-uri (env :db-uri))
 
 (defn psql-list
   ([items] (psql-list items ""))

@@ -1,37 +1,41 @@
 (ns chicken-master.handler
-  (:require [chicken-master.mocks :as mocks]
-            [chicken-master.db :as db]
+  (:require [chicken-master.db :as db]
             [chicken-master.orders :as orders]
             [chicken-master.customers :as customers]
             [chicken-master.products :as products]
             [clojure.edn :as edn]
+            [config.core :refer [env]]
             [compojure.core :refer [GET POST PUT DELETE defroutes]]
-            [compojure.route :refer [resources]]
+            [compojure.route :refer [resources not-found]]
             [compojure.handler :refer [api]]
             [ring.util.response :refer [resource-response]]
             [ring.middleware.basic-authentication :refer [wrap-basic-authentication]]
             [ring.middleware.cors :refer [wrap-cors]]))
 
-(defn get-customers [] {:body (customers/get-all)})
-(defn add-customer [request] {:body (some-> request :body :name customers/create!)})
-(defn delete-customer [id] {:body (customers/delete! (edn/read-string id))})
+(defn as-edn [resp]
+  {:headers {"Content-Type" "application/edn"}
+   :body resp})
 
-(defn get-products [_] {:body (products/get-all)})
-(defn save-products [request] {:body (some-> request :body products/update!)})
+(defn get-customers [] (as-edn (customers/get-all)))
+(defn add-customer [request] (as-edn (some-> request :body :name customers/create!)))
+(defn delete-customer [id] (as-edn (customers/delete! (edn/read-string id))))
 
-(defn get-orders [params] {:body {:orders (orders/get-all)}})
+(defn get-products [_] (as-edn (products/get-all)))
+(defn save-products [request] (as-edn (some-> request :body products/update!)))
+
+(defn get-orders [params] (as-edn {:orders (orders/get-all)}))
 (defn update-order [request]
   (let [id (some-> request :route-params :id (Integer/parseInt))
         order (-> request :body (update :id #(or % id)))]
-    {:body (orders/replace! order)}))
+    (as-edn (orders/replace! order))))
 
-(defn delete-order [id] {:body (orders/delete! (edn/read-string id))})
-(defn set-order-state [id status] {:body (orders/change-state! (edn/read-string id) status)})
+(defn delete-order [id] (as-edn (orders/delete! (edn/read-string id))))
+(defn set-order-state [id status] (as-edn (orders/change-state! (edn/read-string id) status)))
 
 (defn get-stock [params]
-  {:body
+  (as-edn
    {:customers (:body (get-customers))
-    :products (:body (get-products params))}})
+    :products (:body (get-products params))}))
 
 (defroutes routes
   (GET "/stock" {params :query-params} (get-stock params))
@@ -49,15 +53,13 @@
   (POST "/orders/:id/:status" [id status] (set-order-state id status))
 
   (GET "/" [] (resource-response "index.html" {:root "public"}))
-  (resources "/"))
-
+  (resources "/")
+  (not-found "not found"))
 
 (defn- handle-edn [response]
-  (if (-> response :body type #{java.io.File java.lang.String})
-    response
-    (-> response
-        (assoc-in [:headers "Content-Type"] "application/edn")
-        (update :body pr-str))))
+  (if (= (get-in response [:headers "Content-Type"]) "application/edn")
+    (update response :body pr-str)
+    response))
 
 (defn wrap-edn-response [handler]
   (fn
@@ -79,7 +81,7 @@
 
 (def handler (-> routes
                  (wrap-basic-authentication authenticated?)
-                 (wrap-cors :access-control-allow-origin [#"http://localhost:8280"]
+                 (wrap-cors :access-control-allow-origin (map re-pattern (env :allow-origin))
                             :access-control-allow-methods [:get :put :post :delete :options])
                  api
                  wrap-edn-request

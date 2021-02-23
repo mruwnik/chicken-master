@@ -4,9 +4,6 @@
             [chicken-master.db :as db]))
 
 (defn get-all []
-  (prn "asd" (->> (sql/query db/db-uri ["select * from products where deleted is null"])
-                  (map (fn [{:products/keys [name amount]}] [(keyword name) amount]))
-                  (into {})))
   (->> (sql/query db/db-uri ["select * from products where deleted is null"])
        (map (fn [{:products/keys [name amount]}] [(keyword name) amount]))
        (into {})))
@@ -19,7 +16,6 @@
        (into {})))
 
 (defn update! [new-products]
-  (prn new-products)
   (jdbc/with-transaction [tx db/db-uri]
     (doseq [[prod amount] new-products]
       (jdbc/execute! tx

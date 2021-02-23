@@ -1,7 +1,8 @@
 (ns chicken-master.config
   (:require [re-frame.core :as re-frame]
             [chicken-master.time :as time]
-            [chicken-master.subs :as subs]))
+            [chicken-master.subs :as subs]
+            [cljs.reader :refer [read-string]]))
 
 (def debug?
   ^boolean goog.DEBUG)
@@ -14,7 +15,7 @@
 (defn get-setting
   "Returns value of `key' from browser's localStorage."
   ([key]
-   (-> js/window (.-localStorage) (.getItem :settings) cljs.reader/read-string (get key)))
+   (-> js/window (.-localStorage) (.getItem :settings) read-string (get key)))
   ([key default]
    (if (nil? (get-setting key))
      default
@@ -32,8 +33,9 @@
                        :editable-number-inputs (get-setting :editable-number-inputs false) ; only allow number modifications in the edit modal
                        :hide-fulfilled-orders (get-setting :hide-fulfilled-orders false)
 
-                       :backend-url (get-setting :backend-url "http://localhost:3000/")
+                       :backend-url (get-setting :backend-url (.. js/window -location -href)) ; "http://localhost:3000/"
                        })
+
 
 (defn- settings [key]
   (get @(re-frame/subscribe [::subs/settings]) key))
@@ -83,13 +85,4 @@
 
    [:h3 "Ustawienia tyłu"]
    (input :backend-url "backend URL" {})
-
-   [:button {:on-click #(re-frame/dispatch
-                         [:chicken-master.events/confirm-action
-                          "na pewno wyczyścić?"
-                          :chicken-master.events/clear-database])} "Wyczyść bazę"]
-   [:button {:on-click #(re-frame/dispatch
-                         [:chicken-master.events/confirm-action
-                          "na pewno nowe dane wygenerować?"
-                          :chicken-master.events/generate-database])} "Wygeneruj dane"]
    ])

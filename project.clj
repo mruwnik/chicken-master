@@ -24,7 +24,7 @@
 
   :min-lein-version "2.9.0"
 
-  :jvm-opts ["-Xmx1G"]
+  :jvm-opts ["-Xmx1G" "-Dconfig=config/dev/config.edn"]
 
   :source-paths ["src/clj" "src/cljs"]
 
@@ -84,9 +84,9 @@
   :profiles
   {:dev
    {:dependencies [[binaryage/devtools "1.0.2"]]
-    :source-paths ["dev"]}
+    :source-paths ["config/dev"]}
 
-   :prod {}
+   :prod {:resource-paths ["config/prod"]}
 
    :uberjar {:source-paths ["env/prod/clj"]
              :omit-source  true

@@ -1,0 +1,13 @@
+[Unit]
+Description=Chicken master
+After=postgresql.service
+
+[Service]
+ExecStart=/usr/bin/java -Dconfig="/home/dan/chicken-master/config.edn" -jar /home/dan/chicken-master/target/chicken-master.jar
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+
+[Install]
+WantedBy=multi-user.target

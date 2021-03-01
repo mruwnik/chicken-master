@@ -1,0 +1,7 @@
+{;; Networking settings
+ :port 8000
+ :allow-origin ["http://91.218.78.71" "https://mruwnik.github.io"]
+
+ ;; db settings
+ :db-uri {:jdbcUrl "jdbc:postgresql://localhost/chickens"}
+ }

@@ -43,7 +43,7 @@
 (defn get-order [tx user-id id]
   (first (get-orders tx "WHERE o.id = ? AND o.user_id = ?" [id user-id])))
 
-(defn get-all [user-id] (get-orders db/db-uri "WHERE o.user_id = ?" [user-id]))
+(defn get-all [user-id] (group-by :day (get-orders db/db-uri "WHERE o.user_id = ?" [user-id])))
 
 (defn- orders-for-days [tx user-id & days]
   (let [days (remove nil? days)]
@@ -51,18 +51,11 @@
          (map t/inst->timestamp)
          (map jdbc.types/as-date)
          (into [user-id])
-         (get-orders tx (str "WHERE o.user_id = ? AND o.order_date::date IN " (db/psql-list days))))))
-
-(defn- orders-between [tx user-id from to]
-  (get-orders
-   tx
-   "WHERE o.order_date::date >= ? AND o.order_date::date <= ? AND o.user_id = ?"
-   [(some-> from t/inst->timestamp jdbc.types/as-date)
-    (some-> to t/inst->timestamp jdbc.types/as-date)
-    user-id]))
+         (get-orders tx (str "WHERE o.user_id = ? AND o.order_date::date IN " (db/psql-list days)))
+         (group-by :day)
+         (merge (reduce #(assoc %1 (t/format-date %2) {}) {} days)))))
 
 (defn replace! [user-id {:keys [who products] :as order}]
-  (prn order)
   (jdbc/with-transaction [tx db/db-uri]
     (let [customer-id (or (:id who)
                       (:customers/id (db/get-by-id tx user-id :customers (:name who) :name)))

@@ -23,9 +23,9 @@
 
 (defn get-products [user-id] (as-edn (products/get-all user-id)))
 (defn save-products [{:keys [body basic-authentication]}]
-  (some->> body (products/update! basic-authentication) as-edn))
+  (some->> body (products/update! basic-authentication) (assoc {} :products) as-edn))
 
-(defn get-orders [user-id] (as-edn {:orders (orders/get-all user-id)}))
+(defn get-orders [user-id] (as-edn (orders/get-all user-id)))
 (defn update-order [request]
   (let [user-id (:basic-authentication request)
         id (some-> request :route-params :id (Integer/parseInt))

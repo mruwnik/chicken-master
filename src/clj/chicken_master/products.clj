@@ -9,11 +9,12 @@
        (into {})))
 
 (defn products-map [tx products]
-  (->> (map name (keys products))
-       (into [(str "SELECT id, name from products where name IN " (db/psql-list (keys products)))])
-       (sql/query tx)
-       (map #(vector (:products/name %) (:products/id %)))
-       (into {})))
+  (when (seq products)
+    (->> (map name (keys products))
+         (into [(str "SELECT id, name from products where name IN " (db/psql-list (keys products)))])
+         (sql/query tx)
+         (map #(vector (:products/name %) (:products/id %)))
+         (into {}))))
 
 (defn update! [user-id new-products]
   (jdbc/with-transaction [tx db/db-uri]

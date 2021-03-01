@@ -40,36 +40,34 @@
     [:div {:class :product-item-edit :key (gensym)}
      [:div {:class :input-item}
       ;; [:label {:for :product} "co"]
-      [:select {:name (str "product-" id) :id :product :defaultValue (some-> what name)
+      [:select {:name (str "product-" id) :id :product :defaultValue (or (some-> what name) "-")
                 :on-change #(let [prod (-> % .-target .-value keyword)]
                               (if-not (= prod :-)
                                 (swap! state assoc prod (+ (@state prod) (@state what))))
-                              (swap! state dissoc what)
-                              )}
-       (for [product (-> available (conj what) sort vec (conj nil))]
-         [:option {:key (gensym) :value product} (if product (name product) "-")])]
-      ]
+                              (swap! state dissoc what))}
+       (for [product (->> available (concat [what]) (remove nil?) sort vec)]
+         [:option {:key (gensym) :value product} (name product)])
+       [:option {:key (gensym) :value nil} "-"]]]
      (number-input (str "amount-" id) nil (@state what)
-                   #(swap! state assoc what (-> % .-target .-value num-or-nil)))
-     ]))
+                   #(swap! state assoc what (-> % .-target .-value num-or-nil)))]))
 
 (defn products-edit [selected-prods & {:keys [available-prods getter-fn]
                                        :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
-  (let [state (reagent/atom (or selected-prods {}))]
+  (let [state (reagent/atom (or selected-prods {}))
+        all-product-names (-> available-prods keys set)]
     (fn []
-      (let [available (remove (partial get @state) (keys available-prods))
-            products (->> @state
-                          keys
-                          sort
+      (let [available (remove (partial get @state) all-product-names)
+            product-names (if (seq available)
+                            (conj (->> @state (map first) vec) nil)
+                            (map first @state))
+            products (->> product-names
                           (map (partial product-item available state))
-                          (into [:div {:class :product-items-edit}]))
-            products (conj products (product-item available state nil))]
+                          (into [:div {:class :product-items-edit}]))]
         (if getter-fn
           (conj products
                 [:button {:type :button
                           :on-click #(getter-fn (dissoc @state nil))} "ok"])
-          products
-          )))))
+          products)))))
 
 (defn format-product [settings [product amount]]
   [:div {:key (gensym) :class :product}

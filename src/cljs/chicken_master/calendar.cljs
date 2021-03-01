@@ -1,6 +1,7 @@
 (ns chicken-master.calendar
   (:require
    [re-frame.core :as re-frame]
+   [reagent.core :as reagent]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]
    [chicken-master.products :as prod]
@@ -19,22 +20,28 @@
    :notes notes
    :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
+(defn order-form [order]
+  (let [state (reagent/atom (or order{}))
+        customers @(re-frame/subscribe [::subs/available-customers])
+        available-prods @(re-frame/subscribe [::subs/available-products])]
+    (fn []
+      [:div
+       (let [who (:who @state)]
+         [:div
+          (html/input :who "kto" {:required true :default (:name who) :list :customers})
+          (into [:datalist {:id :customers}]
+                (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
+          [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]])
+       (html/input :notes "notka"
+                   {:default (:notes @state)})
+       [prod/products-edit (:products @state) :available-prods available-prods]])))
+
 (defn edit-order []
   (html/modal
    :order-edit
-   [:div
-    (let [who @(re-frame/subscribe [::subs/order-edit-who])
-          customers @(re-frame/subscribe [::subs/available-customers])]
-      [:div
-       (html/input :who "kto" {:required true :default (:name who) :list :customers})
-       (into [:datalist {:id :customers}]
-             (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
-       [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]])
-    (html/input :notes "notka"
-           {:default @(re-frame/subscribe [::subs/order-edit-notes])})
-    [prod/products-edit @(re-frame/subscribe [::subs/order-edit-products])]]
+   [order-form @(re-frame/subscribe [::subs/editted-order])]
    ;; On success
-   (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
+   :on-submit (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
 (defn format-order [settings {:keys [id who day hour notes products state]}]
   [:div {:class [:order state] :key (gensym)

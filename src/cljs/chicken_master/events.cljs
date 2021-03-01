@@ -47,17 +47,17 @@
    (when (js/confirm msg)
      {:fx [[:dispatch (into [on-confirm-event] params)]]})))
 
-(re-frame/reg-event-fx
- ::remove-order
- (fn [_ [_ id]]
-   {:http-xhrio (http-request :delete (str "orders/" id))}))
-
 (re-frame/reg-event-db
  ::failed-request
  (fn [db [_ response]]
    (.error js/console (str response))
    (js/alert "Wystąpił błąd")
    (assoc db :loading? false)))
+
+(re-frame/reg-event-fx
+ ::remove-order
+ (fn [_ [_ id]]
+   {:http-xhrio (http-request :delete (str "orders/" id))}))
 
 (re-frame/reg-event-fx
  ::move-order
@@ -91,20 +91,19 @@
  (fn [{{order :order-edit} :db} [_ form]]
    {:dispatch [::hide-modal :order-edit]
     :http-xhrio (http-post (str "orders")
-                                         (merge
-                                          (select-keys order [:id :day :hour :state])
-                                          (select-keys form [:id :day :hour :state :who :notes :products])))}))
+                           (merge
+                            (select-keys order [:id :day :hour :state])
+                            (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
 (re-frame/reg-event-db
  ::process-fetched-days
- (fn [db [_ orders]]
+ (fn [db [_ days]]
    (-> db
        (assoc :loading? nil)
        (update :current-days (fn [current-days]
-                               (let [days (group-by :day orders)]
-                                 (for [[day orders] current-days]
-                                   [day (if (contains? days day) (days day) orders)]))))
-       (update :orders #(reduce (fn [m cust] (assoc m (:id cust) cust)) % orders)))))
+                               (for [[day orders] current-days]
+                                 [day (if (contains? days day) (days day) orders)])))
+       (update :orders #(reduce (fn [m order] (assoc m (:id order) order)) % (mapcat second days))))))
 
 (re-frame/reg-event-fx
  ::scroll-weeks
@@ -131,7 +130,7 @@
  ::fetch-orders
  (fn [_ [_ from to]]
    {:dispatch [::start-loading]
-    :http-xhrio (http-get "orders" {} ::process-stock)}))
+    :http-xhrio (http-request :get "orders")}))
 
 ;; Customers events
 (re-frame/reg-event-fx
@@ -170,12 +169,11 @@
 (defn assoc-if [coll key val] (if val (assoc coll key val) coll))
 (re-frame/reg-event-fx
  ::process-stock
- (fn [{db :db} [_ {:keys [products customers orders]}]]
+ (fn [{db :db} [_ {:keys [products customers]}]]
    {:db (-> db
             (assoc-if :products products)
-            (assoc-if :customers customers)
-            (assoc-if :orders (some->> orders (into {} (map #(vector (:id %) %))))))
-    :dispatch [::scroll-weeks 0]
+            (assoc-if :customers customers))
+    :dispatch [::stop-loading]
     }))
 
 (re-frame/reg-event-fx
@@ -183,7 +181,7 @@
  (fn [_ [_ products]]
    {:fx [[:dispatch [::hide-modal :stock]]
          [:dispatch [::start-loading]]]
-    :http-xhrio (http-request :post "products" :body products :on-sucess ::process-stock)}))
+    :http-xhrio (http-request :post "products" :body products :on-success ::process-stock)}))
 
 ;; Settings
 

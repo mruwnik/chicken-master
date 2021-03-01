@@ -14,8 +14,6 @@
 (re-frame/reg-sub ::show-customers-modal (fn [db] (-> db :clients :show)))
 (re-frame/reg-sub ::show-settings-modal (fn [db] (-> db :settings :show)))
 
-(re-frame/reg-sub ::order-edit-who (fn [db] (-> db :order-edit :who)))
-(re-frame/reg-sub ::order-edit-notes (fn [db] (-> db :order-edit :notes)))
-(re-frame/reg-sub ::order-edit-products (fn [db] (-> db :order-edit :products)))
+(re-frame/reg-sub ::editted-order (fn [db] (:order-edit db)))
 
 (re-frame/reg-sub ::current-days (fn [db] (:current-days db)))

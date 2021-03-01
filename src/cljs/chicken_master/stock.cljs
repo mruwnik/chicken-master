@@ -29,11 +29,11 @@
     [:h2 "Magazyn"]
     [stock-form @(re-frame/subscribe [::subs/available-products])]]
    ;; On success
-   (fn [form]
-     (->> form
-          (reduce-kv #(if-let [val (prod/num-or-nil %3)]
-                        (assoc %1 (keyword %2) val)
-                        %1)
-                     {})
-          (conj [::event/save-stock])
-          re-frame/dispatch))))
+   :on-submit (fn [form]
+                (->> form
+                     (reduce-kv #(if-let [val (prod/num-or-nil %3)]
+                                   (assoc %1 (keyword %2) val)
+                                   %1)
+                                {})
+                     (conj [::event/save-stock])
+                     re-frame/dispatch))))

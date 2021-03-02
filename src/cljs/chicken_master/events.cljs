@@ -3,9 +3,10 @@
    [re-frame.core :as re-frame]
    [chicken-master.db :as db]
    [chicken-master.time :as time]
-   [chicken-master.config :refer [settings default-settings]]
+   [chicken-master.config :refer [settings default-settings set-item!]]
    [day8.re-frame.http-fx]
-   [ajax.edn :as edn]))
+   [ajax.edn :as edn]
+   [goog.crypt.base64 :as b64]))
 
 (defn http-request [method endpoint & {:keys [params body on-success on-failure]
                                        :or {on-success ::process-fetched-days
@@ -13,13 +14,14 @@
   {:method method
    :uri (str (settings :backend-url) endpoint)
    :headers {"Content-Type" "application/edn"
-             "authorization" "Basic c2lsb2E6a3JhY2g="}
+             "authorization" (str "Basic " (some-> js/window (.-localStorage) (.getItem :bearer-token)))}
    :format (edn/edn-request-format)
    :body (some-> body pr-str)
    :params params
    :response-format (edn/edn-response-format)
    :on-success  [on-success]
    :on-failure     [on-failure]})
+
 
 (defn http-get [endpoint params on-success]
   (http-request :get endpoint :params params :on-success on-success))
@@ -31,8 +33,17 @@
  ::initialize-db
  (fn [_ _]
    (time/update-settings default-settings)
-   {:db (assoc db/default-db :settings default-settings)
-    :fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
+   (let [user (some-> js/window (.-localStorage) (.getItem :bearer-token))]
+     {:db (assoc db/default-db
+                 :settings default-settings
+                 :current-user user)
+      :dispatch [(when user ::load-db)]})))
+
+(re-frame/reg-event-fx
+ ::load-db
+ (fn [_ _]
+   (time/update-settings default-settings)
+   {:fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
          [:dispatch [::start-loading]]
          [:dispatch [::fetch-stock]]
          [:dispatch [::fetch-orders]]]}))
@@ -52,7 +63,9 @@
  (fn [db [_ response]]
    (.error js/console (str response))
    (js/alert "Wystąpił błąd")
-   (assoc db :loading? false)))
+   (-> db
+       (assoc :loading? false)
+       (update :current-user #(when-not (= (:status response) 401) %)))))
 
 (re-frame/reg-event-fx
  ::remove-order
@@ -189,6 +202,14 @@
  ::show-settings
  (fn [db _]
    (assoc-in db [:settings :show] true)))
+
+
+(re-frame/reg-event-fx
+ ::set-user
+ (fn [{db :db} [_ user]]
+   (set-item! :bearer-token (b64/encodeString (str (user "name") ":" (user "password"))))
+   {:db (assoc db :current-user (b64/encodeString (str (user "name") ":" (user "password"))))
+    :dispatch [::load-db]}))
 
 
 (comment

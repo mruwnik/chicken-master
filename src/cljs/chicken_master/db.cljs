@@ -25,6 +25,7 @@
 
    ;; :current-days [{:day (google.date "2020-01-01") :orders []}]
    ;; :customers []
+   ;; :bearer-token "user-token"
    ::clients {:show nil} ; customers edit modal
    :stock {:show nil}
    :products {:eggs 22 :milk 32 :cabbage 54 :carrots 11 :cows 32 :ants 21}

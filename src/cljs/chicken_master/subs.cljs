@@ -2,6 +2,7 @@
   (:require [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub ::name (fn [db] (:name db)))
+(re-frame/reg-sub ::current-user (fn [db] (:current-user db)))
 (re-frame/reg-sub ::settings (fn [db] (:settings db)))
 (re-frame/reg-sub ::loading? (fn [db] (:loading? db)))
 

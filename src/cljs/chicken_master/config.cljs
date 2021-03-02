@@ -65,6 +65,8 @@
 (defn settings-options []
   [:div
    [:h3 "Ustawienia wyglądu kalendarza"]
+   [:button {:type :button :on-click #(set-item! :bearer-token nil)} "wyloguj"]
+
    (input :first-day-offset "o ile dni przesunąć niedziele w lewo"
           {:type :number :max 7 :min 0 :parser #(js/parseInt %)})
    (input :day-names "skróty nazw dni tygodnia"

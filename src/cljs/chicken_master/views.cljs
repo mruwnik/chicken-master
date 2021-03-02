@@ -12,7 +12,23 @@
 (defn show-settings []
   (html/modal :settings (settings-options)))
 
-(defn main-panel []
+(defn login-screen []
+  [:div
+   (html/modal
+    :login
+    [:div
+     [:div
+      [:label {:for :name} "nazwa użytkownika"]
+      [:br]
+      [:input {:id :name :name :name}]]
+     [:div
+      [:label {:for :name} "hasło"]
+      [:br]
+      [:input {:id :password :name :password :type :password}]]]
+    :on-submit #(re-frame/dispatch [::event/set-user %])
+    :show-cancel nil)])
+
+(defn app []
   [:div {:class :full-height}
    [:div {:class [:loader-container (if-not @(re-frame/subscribe [::subs/loading?]) :hidden)]}
     [:div {:class :loader}]]
@@ -36,3 +52,8 @@
    (cal/calendar @(re-frame/subscribe [::subs/current-days]) @(re-frame/subscribe [::subs/settings]))
    [:button {:id :scroll-down-button :class [:menu-button :scroll-button] :on-click #(re-frame/dispatch [::event/scroll-weeks 2])} "v"]
    ])
+
+(defn main-panel []
+  (if @(re-frame/subscribe [::subs/current-user])
+    (app)
+    (login-screen)))

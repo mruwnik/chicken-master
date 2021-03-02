@@ -39,8 +39,9 @@
      content
      [:div {:class :form-buttons}
       [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "ok"]]]])
-  ([modal-id content & {:keys [on-submit submit-text]
-                         :or {submit-text "ok"}}]
+  ([modal-id content & {:keys [on-submit submit-text show-cancel]
+                        :or {submit-text "ok"
+                             show-cancel true}}]
    [:div {:class :popup :on-click #(re-frame/dispatch [::event/hide-modal modal-id])}
     [:form {:action "#"
             :class :popup-content
@@ -52,7 +53,8 @@
      content
      [:div {:class :form-buttons}
       [:button submit-text]
-      [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "anuluj"]]]]))
+      (when show-cancel
+        [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "anuluj"])]]]))
 
 
 (comment

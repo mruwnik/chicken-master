@@ -59,7 +59,7 @@
   (jdbc/with-transaction [tx db/db-uri]
     (let [customer-id (or (:id who)
                       (:customers/id (db/get-by-id tx user-id :customers (:name who) :name)))
-          products-map (products/products-map tx products)
+          products-map (products/products-map tx user-id products)
           previous-day (some->> order :id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))
           order-id (upsert-order! tx user-id customer-id order)]
       (sql/delete! tx :order_products {:order_id order-id})

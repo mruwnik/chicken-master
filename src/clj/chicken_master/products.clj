@@ -4,14 +4,14 @@
             [chicken-master.db :as db]))
 
 (defn get-all [user-id]
-  (->> (sql/query db/db-uri ["select * from products where deleted is null and user_id = ?" user-id])
+  (->> (sql/query db/db-uri ["SELECT * FROM products WHERE deleted IS NULL AND user_id = ?" user-id])
        (map (fn [{:products/keys [name amount]}] [(keyword name) amount]))
        (into {})))
 
-(defn products-map [tx products]
+(defn products-map [tx user-id products]
   (when (seq products)
     (->> (map name (keys products))
-         (into [(str "SELECT id, name from products where name IN " (db/psql-list (keys products)))])
+         (into [(str "SELECT id, name FROM products WHERE user_id = ? AND name IN " (db/psql-list (keys products))) user-id])
          (sql/query tx)
          (map #(vector (:products/name %) (:products/id %)))
          (into {}))))

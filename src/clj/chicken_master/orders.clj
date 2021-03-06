@@ -4,9 +4,10 @@
             [next.jdbc.sql :as sql]
             [chicken-master.db :as db]
             [chicken-master.products :as products]
+            [chicken-master.customers :as customers]
             [chicken-master.time :as t]))
 
-(defn- upsert-order! [tx user-id customer-id {:keys [id day state notes]}]
+(defn upsert-order! [tx user-id customer-id {:keys [id day state notes]}]
   (let [order {:customer_id customer-id
                :notes notes
                :status (some-> state name jdbc.types/as-other)
@@ -58,7 +59,7 @@
 (defn replace! [user-id {:keys [who products] :as order}]
   (jdbc/with-transaction [tx db/db-uri]
     (let [customer-id (or (:id who)
-                      (:customers/id (db/get-by-id tx user-id :customers (:name who) :name)))
+                          (customers/get-by-name tx user-id who))
           products-map (products/products-map tx user-id products)
           previous-day (some->> order :id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))
           order-id (upsert-order! tx user-id customer-id order)]
@@ -87,7 +88,7 @@
           operator (condp = state
                      "fulfilled" "-"
                      "waiting"   "+")]
-      (when (not= (:state order) state)
+      (when (not= (:state order) (keyword state))
         (doseq [[prod amount] (:products order)]
           (jdbc/execute-one! tx
                              [(str "UPDATE products SET amount = amount " operator " ? WHERE name = ?")

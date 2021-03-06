@@ -9,16 +9,24 @@
   {:headers {"Content-Type" "application/edn"}
    :body resp})
 
-(defn get-customers [user-id] (as-edn (customers/get-all user-id)))
+(defn get-values [user-id kinds]
+  (let [getters {:customers customers/get-all
+                 :products products/get-all
+                 :order orders/get-all}]
+    (as-edn (reduce #(assoc %1 %2 ((getters %2) user-id)) {} kinds))))
+
+(defn get-customers [user-id] (get-values user-id [:customers]))
 (defn add-customer [{:keys [body basic-authentication]}]
   (as-edn (some->> body :name (customers/create! basic-authentication))))
-(defn delete-customer [user-id id] (->> id edn/read-string (customers/delete! user-id) as-edn))
+(defn delete-customer [user-id id]
+  (->> id edn/read-string (customers/delete! user-id))
+  (get-values user-id [:orders :customers]))
 
-(defn get-products [user-id] (as-edn (products/get-all user-id)))
+(defn get-products [user-id] (get-values user-id [:products]))
 (defn save-products [{:keys [body basic-authentication]}]
   (some->> body (products/update! basic-authentication) (assoc {} :products) as-edn))
 
-(defn get-orders [user-id] (as-edn (orders/get-all user-id)))
+(defn get-orders [user-id] (get-values user-id [:orders]))
 (defn update-order [request]
   (let [user-id (:basic-authentication request)
         id (some-> request :route-params :id (Integer/parseInt))
@@ -28,10 +36,7 @@
 (defn delete-order [user-id id] (->> id edn/read-string (orders/delete! user-id) as-edn))
 (defn set-order-state [user-id id status] (as-edn (orders/change-state! user-id (edn/read-string id) status)))
 
-(defn get-stock [user-id]
-  (as-edn
-   {:customers (:body (get-customers user-id))
-    :products (:body (get-products user-id))}))
+(defn get-stock [user-id] (get-values user-id [:customers :products]))
 
 (defroutes all-routes
   (GET "/stock" [:as {user-id :basic-authentication}] (get-stock user-id))

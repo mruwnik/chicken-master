@@ -9,11 +9,14 @@
   {:headers {"Content-Type" "application/edn"}
    :body resp})
 
+(defn- values-for-kind [user-id kind]
+  (when-let [getter ({:customers customers/get-all
+                      :products products/get-all
+                      :orders orders/get-all} kind)]
+    (getter user-id)))
+
 (defn get-values [user-id kinds]
-  (let [getters {:customers customers/get-all
-                 :products products/get-all
-                 :order orders/get-all}]
-    (as-edn (reduce #(assoc %1 %2 ((getters %2) user-id)) {} kinds))))
+  (as-edn (reduce #(assoc %1 %2 (values-for-kind user-id %2)) {} kinds)))
 
 (defn get-customers [user-id] (get-values user-id [:customers]))
 (defn add-customer [{:keys [body basic-authentication]}]
@@ -26,7 +29,7 @@
 (defn save-products [{:keys [body basic-authentication]}]
   (some->> body (products/update! basic-authentication) (assoc {} :products) as-edn))
 
-(defn get-orders [user-id] (get-values user-id [:orders]))
+(defn get-orders [user-id] (as-edn (orders/get-all user-id)))
 (defn update-order [request]
   (let [user-id (:basic-authentication request)
         id (some-> request :route-params :id (Integer/parseInt))

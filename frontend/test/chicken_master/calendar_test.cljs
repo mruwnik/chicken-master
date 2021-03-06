@@ -1,8 +1,7 @@
-(ns chicken-master.sutendar-test
+(ns chicken-master.calendar-test
   (:require
    [chicken-master.calendar :as sut]
-   [cljs.test :refer-macros [deftest is testing run-tests]]))
-
+   [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest format-raw-order-test
   (testing "no products"
@@ -44,4 +43,3 @@
                                   "product-cow" "cow" "amount-cow" "0"
                                   "product-milk" "milk" "amount-milk" "3.2"})
            {:who {:name "bla" :id 123} :notes "ble" :products {:eggs 12 :milk 3.2}}))))
-(run-tests)

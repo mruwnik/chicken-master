@@ -1,4 +1,4 @@
-(ns clj.chicken-master.orders-test
+(ns chicken-master.orders-test
   (:require
    [next.jdbc :as jdbc]
    [next.jdbc.sql :as sql]

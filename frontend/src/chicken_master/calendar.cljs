@@ -101,7 +101,6 @@
        (into [])))
 
 (defn calendar [days settings]
-  (html/modal :settings [:div "asd"])
   (->> days
        (map (partial day settings))
        (concat (when (settings :calendar-heading) (calendar-header settings)))

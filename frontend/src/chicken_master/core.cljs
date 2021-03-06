@@ -4,9 +4,7 @@
    [re-frame.core :as re-frame]
    [chicken-master.events :as events]
    [chicken-master.views :as views]
-   [chicken-master.config :as config]
-   ))
-
+   [chicken-master.config :as config]))
 
 (defn dev-setup []
   (when config/debug?

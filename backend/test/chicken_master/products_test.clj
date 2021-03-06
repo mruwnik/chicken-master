@@ -1,4 +1,4 @@
-(ns clj.chicken-master.products-test
+(ns chicken-master.products-test
   (:require
    [next.jdbc :as jdbc]
    [next.jdbc.sql :as sql]

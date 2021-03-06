@@ -1,8 +1,7 @@
 (ns chicken-master.products-test
   (:require
    [chicken-master.products :as sut]
-   [cljs.test :refer-macros [deftest is testing run-tests]]))
-
+   [cljs.test :refer-macros [deftest is testing]]))
 
 (deftest test-num-or-nil
   (testing "valid integers"
@@ -40,5 +39,3 @@
            [:div {:class :input-item}
             [:label {:for :id} :label]
             [:input {:type :number :step :any :on-blur nil :defaultValue 12.123 :name :id :id :id}]]))))
-
-(run-tests)

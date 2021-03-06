@@ -10,7 +10,7 @@
 (defn upsert-order! [tx user-id customer-id {:keys [id day state notes]}]
   (let [order {:customer_id customer-id
                :notes notes
-               :status (some-> state name jdbc.types/as-other)
+               :status (some-> (or state "waiting") name jdbc.types/as-other)
                :order_date (some-> day t/parse-date t/inst->timestamp)}]
     (if (db/get-by-id tx user-id :orders id)
       (do (sql/update! tx :orders order {:id id}) id)

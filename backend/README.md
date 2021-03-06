@@ -1,3 +1,6 @@
+# Backend
+
+The API for the chickens service.
 
 ## Development
 

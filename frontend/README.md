@@ -1,3 +1,6 @@
+# Frontend
+
+All visible stuff.
 
 ## Development
 
@@ -29,6 +32,6 @@ Compile the code:
 
 Start the tester:
 
-    karma start
+    CHROME_BIN=/usr/bin/chromium karma start
 
-If the tests are only to be run once, use `karma start --single-run`
+If the tests are only to be run once, use `CHROME_BIN=/usr/bin/chromium karma start --single-run`

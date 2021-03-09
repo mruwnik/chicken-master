@@ -4,8 +4,8 @@
 
 (defn extract-input [elem]
   (condp = (.-tagName elem)
-    "CHECKBOX" [elem (.-checked elem)]
-    "INPUT" [(.-name elem) (if (-> (.-type elem) clojure.string/lower-case #{"checkbox"})
+    "CHECKBOX" [(.-name elem) (.-checked elem)]
+    "INPUT" [(.-name elem) (if (some-> (.-type elem) clojure.string/lower-case #{"checkbox"})
                              (.-checked elem)
                              (.-value elem))]
     "SELECT" [(.-name elem) (some->> elem

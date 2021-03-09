@@ -4,7 +4,8 @@
         day8.re-frame/http-fx {:mvn/version "0.2.3"}}
 
  :aliases
- {:dev {:extra-deps  { thheller/shadow-cljs {:mvn/version "2.11.21"}}
+ {:dev {:extra-deps  { thheller/shadow-cljs {:mvn/version "2.11.21"}
+                      day8.re-frame/test {:mvn/version "0.1.5"}}
         :extra-paths ["test"]}
 
   :garden

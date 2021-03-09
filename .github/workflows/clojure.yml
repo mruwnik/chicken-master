@@ -32,6 +32,10 @@ jobs:
         with:
           node-version: 15.x
 
+      - uses: DeLaGuardo/setup-clojure@3.1
+        with:
+          tools-deps: '1.10.1.763'
+
       - run: npm install karma karma-cljs-test --save-dev karma-chrome-launcher --save-dev
         working-directory: ./frontend
 

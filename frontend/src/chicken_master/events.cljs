@@ -8,13 +8,14 @@
    [ajax.edn :as edn]
    [goog.crypt.base64 :as b64]))
 
+(defn get-token [] (str "Basic " (some-> js/window (.-localStorage) (.getItem :bearer-token))))
 (defn http-request [method endpoint & {:keys [params body on-success on-failure]
                                        :or {on-success ::process-fetched-days
                                             on-failure ::failed-request}}]
   {:method method
    :uri (str (settings :backend-url) endpoint)
    :headers {"Content-Type" "application/edn"
-             "authorization" (str "Basic " (some-> js/window (.-localStorage) (.getItem :bearer-token)))}
+             "authorization" (get-token)}
    :format (edn/edn-request-format)
    :body (some-> body pr-str)
    :params params
@@ -58,14 +59,19 @@
    (when (js/confirm msg)
      {:fx [[:dispatch (into [on-confirm-event] params)]]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
+ ::log-error
+ (fn [_ [_ error]]
+   (.error js/console error)
+   (js/alert "Wystąpił błąd")))
+
+(re-frame/reg-event-fx
  ::failed-request
- (fn [db [_ response]]
-   (.error js/console (str response))
-   (js/alert "Wystąpił błąd")
-   (-> db
-       (assoc :loading? false)
-       (update :current-user #(when-not (= (:status response) 401) %)))))
+ (fn [{db :db} [_ response]]
+   {:db (-> db
+            (assoc :loading? false)
+            (update :current-user #(when-not (= (:status response) 401) %)))
+    :dispatch [::log-error (str response)]}))
 
 (re-frame/reg-event-fx
  ::remove-order
@@ -74,18 +80,18 @@
 
 (re-frame/reg-event-fx
  ::move-order
- (fn [{{orders :orders start-date :start-date} :db} [_ id day]]
+ (fn [{{orders :orders} :db} [_ id day]]
    {:http-xhrio
     (http-request :put (str "orders/" id)
-                  :body (-> id orders (assoc :day day :start-from start-date)))}))
+                  :body (-> id orders (assoc :day day)))}))
 
- (re-frame/reg-event-db
-  ::edit-order
-  (fn [{orders :orders :as db} [_ day id]]
-    (assoc db :order-edit
-           (-> orders
-               (get id {:state :waiting})
-               (merge {:show true :day day})))))
+(re-frame/reg-event-db
+ ::edit-order
+ (fn [{orders :orders :as db} [_ day id]]
+   (assoc db :order-edit
+          (-> orders
+              (get id {:state :waiting})
+              (merge {:show true :day day})))))
 
 (re-frame/reg-event-fx
  ::fulfill-order
@@ -103,11 +109,12 @@
  ::save-order
  (fn [{{order :order-edit} :db} [_ form]]
    {:dispatch [::hide-modal :order-edit]
-    :http-xhrio (http-post (str "orders")
+    :http-xhrio (http-post "orders"
                            (merge
                             (select-keys order [:id :day :hour :state])
                             (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
+;; FIXME: add test
 (re-frame/reg-event-db
  ::process-fetched-days
  (fn [db [_ days]]
@@ -118,6 +125,7 @@
                                  [day (if (contains? days day) (days day) orders)])))
        (update :orders #(reduce (fn [m order] (assoc m (:id order) order)) % (mapcat second days))))))
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
@@ -128,6 +136,7 @@
                                           (time/date-offset (* 7 offset))
                                           time/iso-date)]]]}))
 
+;; FIXME: add test
 (re-frame/reg-event-db
  ::show-from-date
  (fn [{:keys [start-date orders] :as db} [_ day]]
@@ -139,6 +148,7 @@
             :start-date day
             :current-days (map #(vector % (get filtered-orders %)) (sort days))))))
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::fetch-orders
  (fn [_ [_ from to]]
@@ -146,18 +156,21 @@
     :http-xhrio (http-request :get "orders")}))
 
 ;; Customers events
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::show-customers
  (fn [{db :db} _]
    {:db (assoc-in db [:clients :show] true)
     :dispatch [::fetch-stock]}))
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::add-customer
  (fn [_ [_ customer-name]]
    {:http-xhrio (http-request :post "customers"
                                             :body {:name customer-name}
                                             :on-success ::process-stock)}))
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::remove-customer
  (fn [_ [_ id]]
@@ -167,18 +180,21 @@
 
 ;;; Storage events
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::show-stock
  (fn [{db :db} _]
    {:db (assoc-in db [:stock :show] true)
     :dispatch [::fetch-stock]}))
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::fetch-stock
  (fn [_ _]
    {:dispatch [::start-loading]
     :http-xhrio (http-get "stock" {} ::process-stock)}))
 
+;; FIXME: add test
 (defn assoc-if [coll key val] (if val (assoc coll key val) coll))
 (re-frame/reg-event-fx
  ::process-stock
@@ -189,6 +205,7 @@
     :dispatch [::stop-loading]
     }))
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::save-stock
  (fn [_ [_ products]]
@@ -198,12 +215,14 @@
 
 ;; Settings
 
+;; FIXME: add test
 (re-frame/reg-event-db
  ::show-settings
  (fn [db _]
    (assoc-in db [:settings :show] true)))
 
 
+;; FIXME: add test
 (re-frame/reg-event-fx
  ::set-user
  (fn [{db :db} [_ user]]

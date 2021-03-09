@@ -6,10 +6,6 @@ All visible stuff.
 
 Start the server:
 
-    clojure -A:shadow-cljs watch frontend
-
-or
-
     npx shadow-cljs watch frontend
 
 The app will be available at http://localhost:8280/

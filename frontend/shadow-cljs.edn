@@ -1,32 +1,24 @@
-{
- :source-paths ["src" "test"]
+{:deps {:aliases [:dev]}
 
- :dependencies [[reagent "1.0.0"]
-                [re-frame "1.2.0"]
-                [day8.re-frame/http-fx "0.2.2"]
-                [cider/cider-nrepl "0.25.9"]
-                [garden/garden "1.3.10"]]
+ :nrepl {:middleware [refactor-nrepl.middleware/wrap-refactor]}
 
  :builds
  {:frontend {:target :browser
              :output-dir "resources/public/js"
              :asset-path "/js"
              :modules {:app {:init-fn chicken-master.core/init}}
-             :devtools {:http-root "resources/public" :http-port 8280}}
+             :devtools {:repl-pprint true
+                        :after-load chicken-master.core/init
+                        :http-root "resources/public"
+                        :http-port 8280}}
 
   :test     {:target    :browser-test
              :test-dir  "resources/public/js/test"
              :ns-regexp "-test$"
-             :devtools  {:http-port          8021
-                         :http-root          "resources/public/js/test"}}
+             :devtools  {:http-port 8021
+                         :http-root "resources/public/js/test"}}
 
   :ci       {:target :karma
              :test-dir  "resources/public/js/test"
              :output-to  "target/ci.js"
-             :ns-regexp  "-test$"}
-
-  :script
-  {:target :node-script
-   :main demo.script/main
-   :output-to "out/demo-script/script.js"}
-  }}
+             :ns-regexp  "-test$"}}}

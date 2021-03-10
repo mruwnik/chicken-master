@@ -4,8 +4,7 @@
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
    [chicken-master.html :as html]
-   [chicken-master.subs :as subs]
-   [chicken-master.events :as event]))
+   [chicken-master.subs :as subs]))
 
 (defn num-or-nil [val]
   (let [i (js/parseFloat val)]

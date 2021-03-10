@@ -2,7 +2,6 @@
   (:require
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
-   [chicken-master.config :refer [settings]]
    [chicken-master.products :as prod]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]

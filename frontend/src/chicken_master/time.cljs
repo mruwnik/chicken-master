@@ -1,5 +1,5 @@
 (ns chicken-master.time
-  (:import [goog.date DateTime Date Interval]))
+  (:import [goog.date Date Interval]))
 
 (def settings (atom settings))
 (defn update-settings [new-settings] (reset! settings new-settings))

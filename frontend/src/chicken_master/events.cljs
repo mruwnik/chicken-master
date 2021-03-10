@@ -3,7 +3,7 @@
    [re-frame.core :as re-frame]
    [chicken-master.db :as db]
    [chicken-master.time :as time]
-   [chicken-master.config :refer [settings default-settings set-item!]]
+   [chicken-master.config :as config]
    [day8.re-frame.http-fx]
    [ajax.edn :as edn]
    [goog.crypt.base64 :as b64]))
@@ -13,7 +13,7 @@
                                        :or {on-success ::process-fetched-days
                                             on-failure ::failed-request}}]
   {:method method
-   :uri (str (settings :backend-url) endpoint)
+   :uri (str (config/settings :backend-url) endpoint)
    :headers {"Content-Type" "application/edn"
              "authorization" (get-token)}
    :format (edn/edn-request-format)
@@ -33,17 +33,17 @@
 (re-frame/reg-event-fx
  ::initialize-db
  (fn [_ _]
-   (time/update-settings default-settings)
+   (time/update-settings config/default-settings)
    (let [user (some-> js/window (.-localStorage) (.getItem :bearer-token))]
      {:db (assoc db/default-db
-                 :settings default-settings
+                 :settings config/default-settings
                  :current-user user)
       :dispatch [(when user ::load-db)]})))
 
 (re-frame/reg-event-fx
  ::load-db
  (fn [_ _]
-   (time/update-settings default-settings)
+   (time/update-settings config/default-settings)
    {:fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
          [:dispatch [::start-loading]]
          [:dispatch [::fetch-stock]]
@@ -114,7 +114,6 @@
                             (select-keys order [:id :day :hour :state])
                             (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
-;; FIXME: add test
 (re-frame/reg-event-db
  ::process-fetched-days
  (fn [db [_ days]]
@@ -125,7 +124,6 @@
                                  [day (if (contains? days day) (days day) orders)])))
        (update :orders #(reduce (fn [m order] (assoc m (:id order) order)) % (mapcat second days))))))
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::scroll-weeks
  (fn [{db :db} [_ offset]]
@@ -136,7 +134,6 @@
                                           (time/date-offset (* 7 offset))
                                           time/iso-date)]]]}))
 
-;; FIXME: add test
 (re-frame/reg-event-db
  ::show-from-date
  (fn [{:keys [start-date orders] :as db} [_ day]]
@@ -148,7 +145,6 @@
             :start-date day
             :current-days (map #(vector % (get filtered-orders %)) (sort days))))))
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::fetch-orders
  (fn [_ [_ from to]]
@@ -156,21 +152,18 @@
     :http-xhrio (http-request :get "orders")}))
 
 ;; Customers events
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::show-customers
  (fn [{db :db} _]
    {:db (assoc-in db [:clients :show] true)
     :dispatch [::fetch-stock]}))
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::add-customer
  (fn [_ [_ customer-name]]
    {:http-xhrio (http-request :post "customers"
                                             :body {:name customer-name}
                                             :on-success ::process-stock)}))
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::remove-customer
  (fn [_ [_ id]]
@@ -180,32 +173,31 @@
 
 ;;; Storage events
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::show-stock
  (fn [{db :db} _]
    {:db (assoc-in db [:stock :show] true)
     :dispatch [::fetch-stock]}))
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::fetch-stock
  (fn [_ _]
    {:dispatch [::start-loading]
     :http-xhrio (http-get "stock" {} ::process-stock)}))
 
-;; FIXME: add test
-(defn assoc-if [coll key val] (if val (assoc coll key val) coll))
+(defn assoc-if [coll key source]
+  (if (contains? source key)
+    (assoc coll key (source key))
+    coll))
 (re-frame/reg-event-fx
  ::process-stock
- (fn [{db :db} [_ {:keys [products customers]}]]
+ (fn [{db :db} [_ stock]]
    {:db (-> db
-            (assoc-if :products products)
-            (assoc-if :customers customers))
+            (assoc-if :products stock)
+            (assoc-if :customers stock))
     :dispatch [::stop-loading]
     }))
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::save-stock
  (fn [_ [_ products]]
@@ -214,19 +206,16 @@
     :http-xhrio (http-request :post "products" :body products :on-success ::process-stock)}))
 
 ;; Settings
-
-;; FIXME: add test
 (re-frame/reg-event-db
  ::show-settings
  (fn [db _]
    (assoc-in db [:settings :show] true)))
 
 
-;; FIXME: add test
 (re-frame/reg-event-fx
  ::set-user
  (fn [{db :db} [_ user]]
-   (set-item! :bearer-token (b64/encodeString (str (user "name") ":" (user "password"))))
+   (config/set-item! :bearer-token (b64/encodeString (str (user "name") ":" (user "password"))))
    {:db (assoc db :current-user (b64/encodeString (str (user "name") ":" (user "password"))))
     :dispatch [::load-db]}))
 

@@ -20,4 +20,4 @@ The API for the chickens service.
 ## Deployment
 
     clojure -X:depstar uberjar
-    java -jar chickens.jar -Dconfig=config/dev/config.edn
+    java -Dconfig=config/dev/config.edn -jar chickens.jar

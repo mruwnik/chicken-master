@@ -33,7 +33,7 @@
                        :editable-number-inputs (get-setting :editable-number-inputs false) ; only allow number modifications in the edit modal
                        :hide-fulfilled-orders (get-setting :hide-fulfilled-orders false)
 
-                       :backend-url (get-setting :backend-url (.. js/window -location -href)) ; "http://localhost:3000/"
+                       :backend-url (get-setting :backend-url (str (.. js/window -location -href) "api/")) ; "http://localhost:3000/"
                        })
 
 

@@ -11,13 +11,7 @@ See the READMEs in the `backend` and `frontend` folders.
 * daily view
 * infinite scroll
 
-* Move to different day
-
 * handle regular customers
 ** every n days
 ** copy over to next week
 ** cancel regular order
-
-* settings menu
-
-* products CRM

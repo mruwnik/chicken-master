@@ -3,7 +3,7 @@
             [chicken-master.api :as endpoints]
             [clojure.edn :as edn]
             [config.core :refer [env]]
-            [compojure.core :refer [GET defroutes routes]]
+            [compojure.core :refer [GET defroutes routes context]]
             [compojure.route :refer [resources not-found]]
             [compojure.handler :refer [api]]
             [ring.util.response :refer [resource-response]]
@@ -39,11 +39,12 @@
   (not-found "not found"))
 
 (def handler (routes
-              (-> endpoints/all-routes
-                  (wrap-basic-authentication authenticated?)
-                  (wrap-cors :access-control-allow-origin (map re-pattern (env :allow-origin))
-                             :access-control-allow-methods [:get :put :post :delete :options])
-                  api
-                  wrap-edn-request
-                  wrap-edn-response)
+              (context "/api" []
+                       (-> endpoints/all-routes
+                           (wrap-basic-authentication authenticated?)
+                           (wrap-cors :access-control-allow-origin (map re-pattern (env :allow-origin))
+                                      :access-control-allow-methods [:get :put :post :delete :options])
+                           api
+                           wrap-edn-request
+                           wrap-edn-response))
               base-routes))

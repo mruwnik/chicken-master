@@ -1,13 +1,13 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.10.1"}
-        ns-tracker {:mvn/version "0.4.0"}
-        compojure {:mvn/version "1.6.2"}
+        ns-tracker/ns-tracker {:mvn/version "0.4.0"}
+        compojure/compojure {:mvn/version "1.6.2"}
         yogthos/config {:mvn/version "1.1.7"}
         seancorfield/next.jdbc {:mvn/version "1.1.613"}
         org.postgresql/postgresql {:mvn/version "42.2.6"}
-        ring-basic-authentication {:mvn/version "1.1.0"}
-        ring-cors {:mvn/version "0.1.13"}
-        ring {:mvn/version "1.8.1"}}
+        ring-basic-authentication/ring-basic-authentication {:mvn/version "1.1.0"}
+        ring-cors/ring-cors {:mvn/version "0.1.13"}
+        ring/ring {:mvn/version "1.8.1"}}
 
  :aliases
  {:dev     {:jvm-opts    ["-Dconfig=config/dev/config.edn"]
@@ -20,4 +20,4 @@
   :depstar {:replace-deps
             {com.github.seancorfield/depstar {:mvn/version "2.0.193"}}
             :ns-default hf.depstar
-            :exec-args {:aot true :jar "chickens.jar" :main-class chicken-master.server}}}}
+            :exec-args {:aot true :jar "chicken-master.jar" :main-class chicken-master.server}}}}

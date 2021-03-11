@@ -50,7 +50,6 @@
      (assoc db :settings settings))))
 
 (defn change-setting [key val]
-  (prn key val)
   (set-item! :settings (assoc (get-setting :settings) key val))
   (re-frame/dispatch [::change-setting key val]))
 

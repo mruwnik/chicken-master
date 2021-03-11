@@ -72,7 +72,6 @@
           (html/input :notes "notka"
                       {:default (:notes @state)}))
         (when (:products fields)
-          (prn "Asd")
           [prod/products-edit (:products @state) :available-prods available-prods])]))))
 
 (defn edit-order []

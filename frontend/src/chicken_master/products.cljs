@@ -19,6 +19,7 @@
               {:type :number
                :default (round amount 3)
                :step :any
+               :on-focus #(set! (-> % .-target .-value) "")
                :on-blur on-blur}))
 
 (defn collect-products [raw-values]
@@ -53,6 +54,7 @@
 (defn products-edit [state & {:keys [available-prods getter-fn]
                               :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
   (let [all-product-names (-> available-prods keys set)]
+    (swap! state #(or % {}))
     (fn []
       (let [available (remove (partial get @state) all-product-names)
             product-names (if (seq available)

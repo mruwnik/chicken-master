@@ -27,15 +27,3 @@
     (is (= (sut/round 1.234567 1) 1.2))
     (is (= (sut/round 1.234567 2) 1.23))
     (is (= (sut/round 1.234567 3) 1.235))))
-
-(deftest test-number-input
-  (testing "proper format"
-    (is (= (sut/number-input :id :label 12 nil)
-           [:div {:class :input-item}
-            [:label {:for :id} :label]
-            [:input {:type :number :step :any :on-blur nil :defaultValue 12 :name :id :id :id}]])))
-  (testing "numbers get rounded"
-    (is (= (sut/number-input :id :label 12.123456789 nil)
-           [:div {:class :input-item}
-            [:label {:for :id} :label]
-            [:input {:type :number :step :any :on-blur nil :defaultValue 12.123 :name :id :id :id}]]))))

@@ -52,7 +52,7 @@
                              vals
                              (group-by #(get-in % [:who :id])))]
       (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
-        [:details {:open true :class "client" :key (gensym)}
+        [:details {:class "client" :key (gensym)}
          [:summary [:span name [:button {:on-click #(re-frame/dispatch
                                                      [::event/confirm-action
                                                       "na pewno usunąć?"

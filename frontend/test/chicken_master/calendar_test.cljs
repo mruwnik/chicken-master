@@ -69,4 +69,7 @@
     (is (nil? (sut/get-group-products customers "mark"))))
 
   (testing "missing customers are handled"
-    (is (nil? (sut/get-group-products customers "bla bla bla")))))
+    (is (nil? (sut/get-group-products customers "bla bla bla"))))
+
+  (testing "nil customers are handled"
+    (is (nil? (sut/get-group-products customers nil)))))

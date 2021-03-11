@@ -10,7 +10,7 @@
 (defn order-adder [order]
   (let [state (reagent/atom order)]
     (fn []
-      [:details {:class (or (:class order) :customer-order) :key (gensym) :open (:open @state)}
+      [:details {:class (or (:class order) :customer-block) :key (gensym) :open (:open @state)}
        [:summary {:on-click #(swap! state update :open not)}
         [prod/item-adder
          :type :date
@@ -18,8 +18,29 @@
          :class :order-date-picker
          :callback (fn [day] (swap! state #(assoc % :day day :open true)))]]
        (if (:day @state)
-         [prod/products-edit (:products @state)
+         [prod/products-edit (reagent/atom (or (:products @state) {}))
           :getter-fn #(re-frame/dispatch [::event/save-order (assoc @state :products %)])])])))
+
+(defn product-group-adder [who product-group]
+  (let [state (reagent/atom product-group)]
+    (fn []
+      [:div {:class :customer-block}
+       (if-not (:edit @state)
+         [:div
+          [:span {:class :customer-product-group-name} (:name @state)]
+          [:button {:type :button :on-click #(swap! state assoc :edit true)}
+           (if (:name @state) "e" "+")]]
+
+         [:div {:class :customer-product-group-edit}
+          (html/input :customer-product-group-name "nazwa"
+                      {:default (:name @state)
+                       :on-blur #(swap! state assoc :name (-> % .-target .-value))})
+          [prod/products-edit (reagent/atom (or (:products @state) {}))
+           :getter-fn #(do
+                         (swap! state dissoc :edit)
+                         (when (and (:name @state) (:products @state))
+                           (re-frame/dispatch [::event/save-product-group (:id who) (assoc @state :products %)])))]])])))
+
 
 (defn show-customers []
   (html/modal
@@ -31,13 +52,21 @@
                              vals
                              (group-by #(get-in % [:who :id])))]
       (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
-        [:details {:class "client" :key (gensym)}
+        [:details {:open true :class "client" :key (gensym)}
          [:summary [:span name [:button {:on-click #(re-frame/dispatch
                                                      [::event/confirm-action
                                                       "na pewno usunąć?"
                                                       ::event/remove-customer id])} "-"]]]
-         [order-adder {:who who}]
-         (for [order (reverse (sort-by :day (client-orders id)))]
-            [order-adder (assoc order :key (gensym))])
-         ]))]
-     ))
+         [:details {:class :customer}
+          [:summary "Stałe zamówienia"]
+          (for [group (:product-groups who)]
+            [:div {:key (gensym)}
+             [product-group-adder who group]])
+          [product-group-adder {}]]
+
+         [:details {:class :client-orders}
+          [:summary "Zamówienia"]
+          [order-adder {:who who}]
+          (for [order (reverse (sort-by :day (client-orders id)))]
+            [order-adder (assoc order :key (gensym))])]]))]
+   :class :wide-popup))

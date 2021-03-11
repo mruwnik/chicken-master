@@ -366,7 +366,17 @@
                                     (is (= method :delete))
                                     (is (= uri "customers/1"))))
 
-     (rf/dispatch [::sut/remove-customer 1]))))
+     (rf/dispatch [::sut/remove-customer 1])))
+
+  ;; FIXME: the request handler is not being overloaded
+  (testing "product groups can be saved"
+    (rf-test/run-test-sync
+     (param-validator :http-xhrio (fn [[{:keys [method uri body]}]]
+                                    (is (= method :post))
+                                    (is (= uri "customers/1/product-group"))
+                                    (is (= body {:name "bla" :products {:eggs 1 :milk 3}}))))
+
+     (rf/dispatch [::sut/save-product-group 1 {:name "bla" :products {:eggs 1 :milk 3}}]))))
 
 
 (deftest stock-tests

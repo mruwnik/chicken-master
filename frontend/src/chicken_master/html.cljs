@@ -39,10 +39,11 @@
      content
      [:div {:class :form-buttons}
       [:button {:type :button :on-click #(re-frame/dispatch [::event/hide-modal modal-id])} "ok"]]]])
-  ([modal-id content & {:keys [on-submit submit-text show-cancel]
+  ([modal-id content & {:keys [on-submit submit-text show-cancel class]
                         :or {submit-text "ok"
-                             show-cancel true}}]
-   [:div {:class :popup :on-click #(re-frame/dispatch [::event/hide-modal modal-id])}
+                             show-cancel true
+                             class :popup}}]
+   [:div {:class [:popup class] :on-click #(re-frame/dispatch [::event/hide-modal modal-id])}
     [:form {:action "#"
             :class :popup-content
             :on-click #(.stopPropagation %)

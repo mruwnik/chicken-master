@@ -88,6 +88,10 @@ html body .popup .popup-content ..popup-form-buttons * {
   margin: 20px;
 }
 
+html body .wide-popup .popup-content {
+  width: 45%;
+}
+
 html body .scroll-button {
   display: none;
 }
@@ -142,6 +146,12 @@ html body .scroll-button {
     padding: 20px;
     border: 1px solid #888;
     width: 15%;
+  }
+  
+  
+  
+  html body .wide-popup .popup-content {
+    width: 45%;
   }
   
   html body .calendar {
@@ -266,19 +276,24 @@ html body .customers-modal details {
   padding: 0.5em;
 }
 
-html body .customers-modal details.customer-order {
+html body .customers-modal .customer-block {
   margin-left: 1em;
   padding: 0.5em;
 }
 
-html body .customers-modal details.customer-order .order-date-picker {
+html body .customers-modal .customer-block .order-date-picker {
   display: inline-block;
   width: 75%;
   cursor: pointer;
 }
 
-html body .customers-modal details.customer-order .product-item-edit {
+html body .customers-modal .customer-block .product-item-edit {
   margin-left: 1em;
+}
+
+html body .customer-product-group-edit {
+  margin-left: 1.2em;
+  padding: 0.5em;
 }
 
 input::-webkit-outer-spin-button {

@@ -50,10 +50,9 @@
      (number-input (str "amount-" id) nil (@state what)
                    #(swap! state assoc what (-> % .-target .-value num-or-nil)))]))
 
-(defn products-edit [selected-prods & {:keys [available-prods getter-fn]
-                                       :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
-  (let [state (reagent/atom (or selected-prods {}))
-        all-product-names (-> available-prods keys set)]
+(defn products-edit [state & {:keys [available-prods getter-fn]
+                              :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
+  (let [all-product-names (-> available-prods keys set)]
     (fn []
       (let [available (remove (partial get @state) all-product-names)
             product-names (if (seq available)
@@ -80,7 +79,7 @@
   (let [state (reagent/atom value)]
     (fn []
       [:div {:class class :on-click #(.stopPropagation %)}
-       [:input {:type type :name :user-name :default value :value @state
+       [:input {:type type :name :user-name :default-value value
                 :on-change #(let [val (-> % .-target .-value)]
                               (reset! state val)
                               (if-not button (callback val)))}]

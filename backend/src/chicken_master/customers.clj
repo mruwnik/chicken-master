@@ -5,7 +5,9 @@
 
 (defn get-all [user-id]
   (->> (sql/query db/db-uri ["select * from customers where deleted is null AND user_id = ?" user-id])
-       (map (fn [{:customers/keys [id name]}] {:id id :name name}))))
+       (map (fn [{:customers/keys [id name]}] {:id id :name name
+                                              :product-groups [{:name "bla" :products {:eggs 2 :carrots 13}}
+                                                               {:name "ble" :products {:eggs 12 :milk 3}}]}))))
 
 (defn get-by-name [tx user-id name]
   (:customers/id (db/get-by-id tx user-id :customers (:name name) :name)))

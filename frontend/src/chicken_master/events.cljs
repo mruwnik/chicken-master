@@ -170,6 +170,15 @@
      :http-xhrio (http-request :delete (str "customers/" id)
                                              :on-success ::process-stock)}))
 
+(re-frame/reg-event-fx
+ ::save-product-group
+ (fn [_ [_ id group]]
+   {:dispatch [::start-loading]
+    :http-xhrio (http-request :post (str "customers/" id "/product-group")
+                              :body group
+                              :on-success ::process-stock)}))
+
+
 ;;; Storage events
 
 (re-frame/reg-event-fx

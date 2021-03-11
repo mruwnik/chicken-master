@@ -8,7 +8,7 @@
    [chicken-master.events :as event]
    [chicken-master.time :as time]))
 
-(defn format-raw-order [{:strs [who who-id notes] :as raw-values}]
+(defn format-raw-order [{:strs [day who who-id notes] :as raw-values}]
   {:who {:name who
          :id (if (prod/num-or-nil who-id)
                (prod/num-or-nil who-id)
@@ -17,24 +17,63 @@
                (some->> @(re-frame/subscribe [::subs/available-customers])
                     (filter (comp #{who} :name))
                     first :id))}
+   :day day
    :notes notes
    :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
-(defn order-form [order]
-  (let [state (reagent/atom (or order{}))
-        customers @(re-frame/subscribe [::subs/available-customers])
-        available-prods @(re-frame/subscribe [::subs/available-products])]
-    (fn []
-      [:div
-       (let [who (:who @state)]
-         [:div
-          (html/input :who "kto" {:required true :default (:name who) :list :customers})
-          (into [:datalist {:id :customers}]
-                (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
-          [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]])
-       (html/input :notes "notka"
-                   {:default (:notes @state)})
-       [prod/products-edit (:products @state) :available-prods available-prods]])))
+(defn get-group-products [customers who]
+  (some->> customers
+       (filter (comp #{who} :name))
+       first
+       :product-groups
+       (reduce #(assoc %1 (:name %2) (:products %2)) {})))
+
+(defn group-products [state]
+  [:div {:class :input-item}
+   [:label {:for :order-group-products} "stałe"]
+   [:select {:class :order-group-products :id :order-group-products
+             :value "-" :on-change #(some->> % .-target .-value
+                                             (get (:group-products @state))
+                                             (reset! (:products @state)))}
+    [:option "-"]
+    (for [[group _] (:group-products @state)]
+      [:option {:key (gensym)} group])]])
+
+(defn order-form
+  ([order] (order-form order #{:who :day :notes :products :group-products}))
+  ([order fields]
+   (let [customers @(re-frame/subscribe [::subs/available-customers])
+         available-prods @(re-frame/subscribe [::subs/available-products])
+         state (-> (or order {})
+                   (update :products reagent/atom)
+                   (assoc :group-products
+                          (get-group-products customers (-> order :who :name)))
+                   reagent/atom)]
+     (fn []
+       [:div
+        (when (:who fields)
+          (let [who (:who @state)]
+            [:div
+             (html/input :who "kto" {:required true
+                                     :default (:name who)
+                                     :list :customers
+                                     :on-blur #(->> % .-target .-value
+                                                    (get-group-products customers)
+                                                    (swap! state assoc :group-products))})
+             (into [:datalist {:id :customers}]
+                   (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
+             [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]]))
+
+        (when (:day fields)
+          (html/input :day "dzień" {:type :date :required true :default (:day order)}))
+        (when (and (:group-products fields) (-> @state :group-products seq))
+          [group-products state])
+        (when (:notes fields)
+          (html/input :notes "notka"
+                      {:default (:notes @state)}))
+        (when (:products fields)
+          (prn "Asd")
+          [prod/products-edit (:products @state) :available-prods available-prods])]))))
 
 (defn edit-order []
   (html/modal

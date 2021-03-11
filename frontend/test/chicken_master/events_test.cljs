@@ -55,7 +55,7 @@
   (testing "loader gets set"
     (rf-test/run-test-sync
      (set-db {:loading? nil})
-     (is (nil? @(rf/subscribe [::subs/loading?])))
+     (is (not @(rf/subscribe [::subs/loading?])))
      (rf/dispatch [::sut/start-loading])
      (is @(rf/subscribe [::subs/loading?]))))
 
@@ -64,7 +64,22 @@
      (set-db {:loading? true})
      (is @(rf/subscribe [::subs/loading?]))
      (rf/dispatch [::sut/stop-loading])
-     (is (nil? @(rf/subscribe [::subs/loading?]))))))
+     (is (not @(rf/subscribe [::subs/loading?])))))
+
+  (testing "multiple loads handled"
+    (rf-test/run-test-sync
+     (is (not @(rf/subscribe [::subs/loading?])))
+     (rf/dispatch [::sut/start-loading])
+     (rf/dispatch [::sut/start-loading])
+     (rf/dispatch [::sut/start-loading])
+     (is @(rf/subscribe [::subs/loading?]))
+
+     (rf/dispatch [::sut/stop-loading])
+     (is @(rf/subscribe [::subs/loading?]))
+
+     (rf/dispatch [::sut/stop-loading])
+     (rf/dispatch [::sut/stop-loading])
+     (is (not @(rf/subscribe [::subs/loading?]))))))
 
 (deftest confirm-action-test
   (testing "when confirmed, the provided event is called"
@@ -212,7 +227,7 @@
      (set-db {:orders {} :current-days {} :loading? true})
      (rf/dispatch [::sut/process-fetched-days {}])
 
-     (is (nil? @(rf/subscribe [::subs/loading?])))))
+     (is (not @(rf/subscribe [::subs/loading?])))))
 
   (testing "orders get set correctly"
     (rf-test/run-test-sync
@@ -270,7 +285,7 @@
      (set-db {:orders {} :current-days {} :loading? true})
      (rf/dispatch [::sut/show-from-date "2020-01-01"])
 
-     (is (nil? @(rf/subscribe [::subs/loading?])))))
+     (is (not @(rf/subscribe [::subs/loading?])))))
 
   (testing "showing from date works"
     (rf-test/run-test-sync

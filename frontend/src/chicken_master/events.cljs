@@ -50,8 +50,8 @@
          [:dispatch [::fetch-orders]]]}))
 
 (re-frame/reg-event-db ::hide-modal (fn [db [_ modal]] (assoc-in db [modal :show] nil)))
-(re-frame/reg-event-db ::start-loading (fn [db _] (assoc db :loading? true)))
-(re-frame/reg-event-db ::stop-loading (fn [db _] (assoc db :loading? nil)))
+(re-frame/reg-event-db ::start-loading (fn [db _] (update db :loading? inc)))
+(re-frame/reg-event-db ::stop-loading (fn [db _] (update db :loading? dec)))
 
 (re-frame/reg-event-fx
  ::confirm-action
@@ -68,10 +68,9 @@
 (re-frame/reg-event-fx
  ::failed-request
  (fn [{db :db} [_ response]]
-   {:db (-> db
-            (assoc :loading? false)
-            (update :current-user #(when-not (= (:status response) 401) %)))
-    :dispatch [::log-error (str response)]}))
+   {:db (update db :current-user #(when-not (= (:status response) 401) %))
+    :fx [[:dispatch [::log-error (str response)]]
+         [:dispatch [::stop-loading]]]}))
 
 (re-frame/reg-event-fx
  ::remove-order
@@ -114,15 +113,15 @@
                             (select-keys order [:id :day :hour :state])
                             (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::process-fetched-days
- (fn [db [_ days]]
-   (-> db
-       (assoc :loading? nil)
-       (update :current-days (fn [current-days]
-                               (for [[day orders] current-days]
-                                 [day (if (contains? days day) (days day) orders)])))
-       (update :orders #(reduce (fn [m order] (assoc m (:id order) order)) % (mapcat second days))))))
+ (fn [{db :db} [_ days]]
+   {:db (-> db
+            (update :current-days (fn [current-days]
+                                    (for [[day orders] current-days]
+                                      [day (if (contains? days day) (days day) orders)])))
+            (update :orders #(reduce (fn [m order] (assoc m (:id order) order)) % (mapcat second days))))
+    :dispatch [::stop-loading]}))
 
 (re-frame/reg-event-fx
  ::scroll-weeks
@@ -134,16 +133,16 @@
                                           (time/date-offset (* 7 offset))
                                           time/iso-date)]]]}))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::show-from-date
- (fn [{:keys [start-date orders] :as db} [_ day]]
+ (fn [{{:keys [start-date orders] :as db} :db} [_ day]]
    (let [day (or day start-date)
          days (into #{} (time/get-weeks day 2))
          filtered-orders (->> orders vals (filter (comp days :day)) (group-by :day))]
-     (assoc db
-            :loading? nil
-            :start-date day
-            :current-days (map #(vector % (get filtered-orders %)) (sort days))))))
+     {:db (assoc db
+                 :start-date day
+                 :current-days (map #(vector % (get filtered-orders %)) (sort days)))
+      :dispatch [::stop-loading]})))
 
 (re-frame/reg-event-fx
  ::fetch-orders

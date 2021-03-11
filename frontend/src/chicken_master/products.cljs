@@ -90,3 +90,14 @@
                    :type :button
                    :disabled (= @state "")
                    :on-click (if callback #(-> state (reset-vals! value) first callback))} button])])))
+
+(defn group-products [state]
+  [:div {:class :input-item}
+   [:label {:for :order-group-products} "stałe"]
+   [:select {:class :order-group-products :id :order-group-products
+             :value "-" :on-change #(some->> % .-target .-value
+                                             (get (:group-products @state))
+                                             (reset! (:products @state)))}
+    [:option "-"]
+    (for [[group _] (:group-products @state)]
+      [:option {:key (gensym)} group])]])

@@ -22,22 +22,7 @@
    :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
 (defn get-group-products [customers who]
-  (some->> customers
-       (filter (comp #{who} :name))
-       first
-       :product-groups
-       (reduce #(assoc %1 (:name %2) (:products %2)) {})))
-
-(defn group-products [state]
-  [:div {:class :input-item}
-   [:label {:for :order-group-products} "stałe"]
-   [:select {:class :order-group-products :id :order-group-products
-             :value "-" :on-change #(some->> % .-target .-value
-                                             (get (:group-products @state))
-                                             (reset! (:products @state)))}
-    [:option "-"]
-    (for [[group _] (:group-products @state)]
-      [:option {:key (gensym)} group])]])
+  (some->> customers (filter (comp #{who} :name)) first :product-groups))
 
 (defn order-form
   ([order] (order-form order #{:who :day :notes :products :group-products}))
@@ -67,7 +52,7 @@
         (when (:day fields)
           (html/input :day "dzień" {:type :date :required true :default (:day order)}))
         (when (and (:group-products fields) (-> @state :group-products seq))
-          [group-products state])
+          [prod/group-products state])
         (when (:notes fields)
           (html/input :notes "notka"
                       {:default (:notes @state)}))

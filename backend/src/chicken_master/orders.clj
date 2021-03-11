@@ -59,7 +59,7 @@
 (defn replace! [user-id {:keys [who products] :as order}]
   (jdbc/with-transaction [tx db/db-uri]
     (let [customer-id (or (:id who)
-                          (customers/get-by-name tx user-id who))
+                          (customers/get-or-create-by-name tx user-id (:name who)))
           products-map (products/products-map tx user-id products)
           previous-day (some->> order :id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))
           order-id (upsert-order! tx user-id customer-id order)]

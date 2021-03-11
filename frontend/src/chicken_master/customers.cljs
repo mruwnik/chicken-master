@@ -7,8 +7,11 @@
    [chicken-master.html :as html]
    [chicken-master.events :as event]))
 
-(defn order-adder [order]
-  (let [state (reagent/atom order)]
+(defn order-adder [order who]
+  (let [state (-> order
+                  (update :products reagent/atom)
+                  (assoc :group-products (:group-products who))
+                  reagent/atom)]
     (fn []
       [:details {:class (or (:class order) :customer-block) :key (gensym) :open (:open @state)}
        [:summary {:on-click #(swap! state update :open not)}
@@ -18,8 +21,11 @@
          :class :order-date-picker
          :callback (fn [day] (swap! state #(assoc % :day day :open true)))]]
        (if (:day @state)
-         [prod/products-edit (reagent/atom (or (:products @state) {}))
-          :getter-fn #(re-frame/dispatch [::event/save-order (assoc @state :products %)])])])))
+         [:div
+          (when (:product-groups who)
+            [prod/group-products state])
+          [prod/products-edit (:products @state)
+           :getter-fn #(re-frame/dispatch [::event/save-order (assoc @state :products %)])]])])))
 
 (defn product-group-adder [who product-group]
   (let [state (reagent/atom product-group)]
@@ -66,7 +72,7 @@
 
          [:details {:class :client-orders}
           [:summary "Zamówienia"]
-          [order-adder {:who who}]
+          [order-adder who]
           (for [order (reverse (sort-by :day (client-orders id)))]
-            [order-adder (assoc order :key (gensym))])]]))]
+            [order-adder (assoc order :key (gensym)) who])]]))]
    :class :wide-popup))

@@ -23,9 +23,8 @@
 
 (def default-settings {:first-day-offset (get-setting :first-day-offset 1) ; which is the first day of the week (add the offset to `day-names`)
                        :day-names (get-setting :day-names ["Niedz" "Pon" "Wt" "Śr" "Czw" "Pt" "Sob"]) ; how days should be displayed in the calendar view
-                       :calendar-heading (get-setting :calendar-heading false) ; show a header with the names of days
-                       :show-date (get-setting :show-date true) ; display the date for each day
-                       :show-day-name-with-date (get-setting :show-day-name-with-date true) ; add the day name to each date
+                       :date-format (get-setting :date-format "%D %m/%d") ; the format of the days (D - name, d - day, m - month)
+
                        :show-day-add-order (get-setting :show-day-add-order true) ; Show an add order button in each day
 
                        :show-order-time (get-setting :show-order-time false) ; display the time of each order
@@ -51,6 +50,7 @@
      (assoc db :settings settings))))
 
 (defn change-setting [key val]
+  (prn key val)
   (set-item! :settings (assoc (get-setting :settings) key val))
   (re-frame/dispatch [::change-setting key val]))
 
@@ -59,11 +59,17 @@
         handlers (condp = (:type opts)
                    :checkbox {:defaultChecked (settings id)
                               :on-change #(change-setting id (-> % .-target .-checked parser))}
+                   :radio {:defaultChecked (settings id)
+                           :on-click #(change-setting id (-> % .-target .-value parser))}
                    {:defaultValue (settings id)
                     :on-change #(change-setting id (-> % .-target .-value parser))})]
   [:div {:class :input-item}
-   [:label {:for id} label]
-   [:input (merge {:name id :id id} handlers (dissoc opts :parser))]]))
+   (when (and label (not (#{:checkbox :radio} (:type opts))))
+     [:label {:for id} label])
+   [:input (merge {:name id :id id} handlers (dissoc opts :parser))]
+   (when (and label (#{:checkbox :radio} (:type opts)))
+     [:label {:for id} label])
+   ]))
 
 (defn settings-options []
   [:div
@@ -72,14 +78,14 @@
 
    (input :first-day-offset "o ile dni przesunąć niedziele w lewo"
           {:type :number :max 7 :min 0 :parser #(js/parseInt %)})
-   (input :day-names "skróty nazw dni tygodnia"
+   (input :day-names "Nazwy dni tygodnia"
           {:default (clojure.string/join ", " (settings :day-names))
            :parser #(clojure.string/split % #"\s*,\s*")})
    (input :calendar-heading "Pokaż nagłówek z dniami tygodnia" {:type :checkbox})
 
    [:h3 "Ustawienia wyglądu poszczególnych dni"]
-   (input :show-date "Pokaż date" {:type :checkbox})
-   (input :show-day-name-with-date "Pokaż nazwę dnia" {:type :checkbox})
+    (input :date-format "Format daty. %D wstawia nazwę dnia, %d dzień a %m miesiąc" {})
+
    (input :show-day-add-order "Przycisk dodawania zamówienia" {:type :checkbox})
 
    [:h3 "Ustawienia wyglądu zamówien"]

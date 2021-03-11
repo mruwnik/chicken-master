@@ -1,4 +1,5 @@
 (ns chicken-master.time
+  (:require [clojure.string :as str])
   (:import [goog.date Date Interval]))
 
 (def settings (atom settings))
@@ -37,12 +38,11 @@
 (defn today? "true when `d1` is today" [d1] (same-day? (js/Date.) d1))
 
 (defn format-date [date]
-  (when (get @settings :show-date)
-    (if (get @settings :show-day-name-with-date)
-      (str
-       (->> date .getDay (nth (get @settings :day-names)))
-       " " (inc (.getMonth date)) "/" (.getDate date))
-      (str (inc (.getMonth date)) "/" (.getDate date)))))
+  (reduce (fn [date-str [from to]] (str/replace date-str from to))
+          (get @settings :date-format "%D %m/%d")
+          [["%d" (.getDate date)]
+           ["%m" (inc (.getMonth date))]
+           ["%D" (->> date .getDay (nth (get @settings :day-names)))]]))
 
 (defn iso-date [date] (.toIsoString ^js/goog.date.Date date true))
 

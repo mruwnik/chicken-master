@@ -93,15 +93,7 @@
              (map (partial prod/format-product settings))
              (into [:div {:class :products-sum}]))])]]])
 
-(defn calendar-header [settings]
-  (->> (settings :day-names)
-       cycle (drop (settings :first-day-offset))
-       (take 7)
-       (map (fn [day] [:div {:class :day-header} day]))
-       (into [])))
-
 (defn calendar [days settings]
   (->> days
        (map (partial day settings))
-       (concat (when (settings :calendar-heading) (calendar-header settings)))
        (into [:div {:class [:calendar :full-height]}])))

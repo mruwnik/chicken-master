@@ -7,7 +7,7 @@ The API for the chickens service.
 1) Setup the development database:
 
     docker run --name some-postgres -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
-    psql 'postgresql://localhost/postgres?user=postgres&password=mysecretpassword' < resources/schema.sql
+    clojure -A:migrate up
 
 2) Start the server:
 
@@ -21,3 +21,13 @@ The API for the chickens service.
 
     clojure -X:depstar uberjar
     java -Dconfig=config/dev/config.edn -jar chickens.jar
+
+## Migrations
+
+To the newest migration
+
+    clojure -A:migrate up
+
+Down one
+
+    clojure -A:migrate down

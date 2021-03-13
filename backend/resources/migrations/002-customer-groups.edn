@@ -1,0 +1,19 @@
+{:up ["CREATE TABLE customer_groups (
+  id SERIAL,
+  customer_id INT,
+  name VARCHAR(512),
+  user_id INT,
+  PRIMARY KEY(id),
+  CONSTRAINT fk_customer FOREIGN KEY(customer_id) REFERENCES customers(id)
+);"
+      "CREATE TABLE customer_group_products (
+  id SERIAL,
+  customer_group_id INT,
+  product_id INT,
+  amount NUMERIC,
+  PRIMARY KEY(id),
+  CONSTRAINT fk_customer_groups FOREIGN KEY(customer_group_id) REFERENCES customer_groups(id),
+  CONSTRAINT fk_product FOREIGN KEY(product_id) REFERENCES products(id)
+);"]
+ :down ["DROP TABLE customer_group_products;"
+        "DROP TABLE customer_groups;"]}

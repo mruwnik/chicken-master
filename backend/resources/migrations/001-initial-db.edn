@@ -1,13 +1,13 @@
-CREATE EXTENSION pgcrypto;
-CREATE TABLE users (
+{:up ["CREATE EXTENSION pgcrypto;"
+      "CREATE TABLE users (
   id SERIAL,
   name VARCHAR(256) UNIQUE,
   password VARCHAR(256),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY(id)
-);
+);"
 
-CREATE TABLE customers (
+      "CREATE TABLE customers (
   id SERIAL,
   name VARCHAR(512),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -16,9 +16,9 @@ CREATE TABLE customers (
   PRIMARY KEY(id),
   UNIQUE(name, user_id),
   CONSTRAINT fk_users FOREIGN KEY(user_id) REFERENCES users(id)
-);
+);"
 
-CREATE TABLE products (
+      "CREATE TABLE products (
   id SERIAL,
   name VARCHAR(512),
   amount NUMERIC,
@@ -28,10 +28,10 @@ CREATE TABLE products (
   PRIMARY KEY(id),
   UNIQUE(name, user_id),
   CONSTRAINT fk_users FOREIGN KEY(user_id) REFERENCES users(id)
-);
+);"
 
-CREATE TYPE order_state AS ENUM('waiting', 'fulfilled', 'canceled');
-CREATE TABLE orders (
+      "CREATE TYPE order_state AS ENUM('waiting', 'fulfilled', 'canceled');"
+      "CREATE TABLE orders (
   id SERIAL,
   customer_id INT,
   notes TEXT,
@@ -42,9 +42,9 @@ CREATE TABLE orders (
   PRIMARY KEY(id),
   CONSTRAINT fk_customer FOREIGN KEY(customer_id) REFERENCES customers(id),
   CONSTRAINT fk_users FOREIGN KEY(user_id) REFERENCES users(id)
-);
+);"
 
-CREATE TABLE order_products (
+      "CREATE TABLE order_products (
   id SERIAL,
   order_id INT,
   product_id INT,
@@ -52,4 +52,11 @@ CREATE TABLE order_products (
   PRIMARY KEY(id),
   CONSTRAINT fk_order FOREIGN KEY(order_id) REFERENCES orders(id),
   CONSTRAINT fk_product FOREIGN KEY(product_id) REFERENCES products(id)
-);
+);"]
+ :down ["DROP TABLE order_products"
+        "DROP TABLE products"
+        "DROP TABLE orders"
+        "DROP TYPE order_state"
+        "DROP TABLE customers"
+        "DROP TABLE users"
+        "DROP EXTENSION pgcrypto"]}

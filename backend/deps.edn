@@ -13,6 +13,9 @@
  {:dev     {:jvm-opts    ["-Dconfig=config/dev/config.edn"]
             :main-opts   ["-m" "chicken-master.server"]}
 
+  :migrate {:extra-deps {ragtime/ragtime {:mvn/version "0.8.1"}}
+            :main-opts ["-m" "chicken-master.migrate"]}
+
   :test    {:extra-paths ["test"]
             :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.732"}}
             :main-opts  ["-m" "kaocha.runner"]}

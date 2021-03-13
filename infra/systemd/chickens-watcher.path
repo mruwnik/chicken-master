@@ -1,0 +1,5 @@
+[Path]
+PathModified=/srv/chickens
+
+[Install]
+WantedBy=multi-user.target

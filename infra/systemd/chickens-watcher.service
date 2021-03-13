@@ -1,0 +1,10 @@
+[Unit]
+Description=Chicken master restarter
+After=postgres.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart chickens.service
+
+[Install]
+WantedBy=multi-user.target

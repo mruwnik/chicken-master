@@ -1,7 +1,8 @@
 (ns chicken-master.css
   (:require [garden.def :refer [defstyles]]
             [garden.core :refer [css]]
-            [garden.stylesheet :refer [at-media at-keyframes]]))
+            [garden.stylesheet :refer [at-media at-keyframes]]
+            [clojure-watch.core :refer [start-watch]]))
 
 (defstyles screen
   (at-keyframes "spin"
@@ -165,6 +166,19 @@
   ["input[type=number]" {:-moz-appearance :textfield}]
 )
 
+
+
+
 (defn -main
-  ([] (-main "resources/public/css/screen.css"))
-  ([output] (css {:output-to output} screen)))
+  ([command] (-main command "resources/public/css/screen.css"))
+  ([command output]
+   (condp = command
+     "compile" (css {:output-to output} screen)
+     "watch" (start-watch [{:path "src/chicken_master"
+                            :event-types [:modify]
+                            :bootstrap (fn [path] (println "Starting to watch " path))
+                            :callback (fn [_ filename]
+                                        (when (#{"src/chicken_master/css.clj"} filename)
+                                          (css {:output-to output} screen)))
+                            :options {:recursive true}}])
+     (println "Unsuported command - use either compile or watch"))))

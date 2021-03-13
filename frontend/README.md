@@ -12,7 +12,8 @@ The app will be available at http://localhost:8280/
 
 ## Stylesheets
 
-Run `clojure -A:garden -m chicken-master.css` to generate the css files.
+Run `clojure -A:garden -m chicken-master.css compile` to generate the css files once.
+Run `clojure -A:garden -m chicken-master.css watch` to generate the css files on any change.
 
 ## Testing
 

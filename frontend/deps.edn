@@ -9,7 +9,8 @@
         :extra-paths ["test"]}
 
   :garden
-   {:extra-deps {garden/garden {:mvn/version "1.3.10"}}}
+  {:extra-deps {clojure-watch/clojure-watch {:mvn/version "0.1.14"}
+                garden/garden {:mvn/version "1.3.10"}}}
 
   :test     {:extra-paths ["test"]
              :extra-deps  {}}

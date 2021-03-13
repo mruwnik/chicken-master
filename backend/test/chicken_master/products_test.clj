@@ -72,3 +72,27 @@
                   sql/query (constantly [{:products/name "eggs" :products/amount 12}
                                          {:products/name "milk" :products/amount 3}])]
         (is (= (sut/update! :user-id {:eggs 2 :milk 3 :cows 2}) {:eggs 12 :milk 3})))))
+
+(deftest update-products-mapping-test
+  (testing "items get removed"
+    (let [item-id 123]
+      (with-redefs [sut/products-map (constantly {"eggs" 1 "milk" 2 "carrots" 3})
+                    sql/insert-multi! (constantly :ok)
+
+                    sql/delete! (fn [_tx table id]
+                                  (is (= table :bla_products))
+                                  (is (= id {:bla_id item-id})))]
+        (sut/update-products-mapping! :tx 123 :bla item-id {:eggs 34 :milk 25 :carrots 13}))))
+
+  (testing "items get removed"
+    (let [item-id 123]
+      (with-redefs [sut/products-map (constantly {"eggs" 1 "milk" 2 "carrots" 3})
+                    sql/delete! (constantly :ok)
+
+                    sql/insert-multi! (fn [_tx table cols products]
+                                        (is (= table :bla_products))
+                                        (is (= cols [:bla_id :product_id :amount]))
+                                        (is (= products [[item-id 1 34]
+                                                         [item-id 2 25]
+                                                         [item-id 3 13]])))]
+        (sut/update-products-mapping! :tx 123 :bla item-id {:eggs 34 :milk 25 :carrots 13})))))

@@ -47,12 +47,12 @@
            {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :products {:eggs 12 :milk 3.2}}))))
 
 (def customers
-  [{:id 1 :name "mr blobby" :product-groups [{:name "group 1" :products {:eggs 1 :carrots 2}}
-                                             {:name "group 2" :products {:eggs 11 :carrots 2}}
-                                             {:name "group 3" :products {:milk 2 :eggs 12}}]}
-   {:id 2 :name "johnny D" :product-groups [{:name "group 4" :products {:eggs 2}}
-                                            {:name "group 5" :products {:milk 2}}]}
-   {:id 3 :name "joe" :product-groups []}
+  [{:id 1 :name "mr blobby" :product-groups {"group 1" {:products {:eggs 1 :carrots 2}}
+                                             "group 2" {:products {:eggs 11 :carrots 2}}
+                                             "group 3" {:products {:milk 2 :eggs 12}}}}
+   {:id 2 :name "johnny D" :product-groups {"group 4" {:products {:eggs 2}}
+                                            "group 5" {:products {:milk 2}}}}
+   {:id 3 :name "joe" :product-groups {}}
    {:id 4 :name "mark"}])
 
 (deftest get-group-products-test

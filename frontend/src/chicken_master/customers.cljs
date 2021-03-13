@@ -27,8 +27,8 @@
           [prod/products-edit (:products @state)
            :getter-fn #(re-frame/dispatch [::event/save-order (assoc @state :products %)])]])])))
 
-(defn product-group-adder [who product-group]
-  (let [state (reagent/atom product-group)]
+(defn product-group-adder [who [name {:keys [id products]}]]
+  (let [state (reagent/atom {:name name :id id :products (or products {})})]
     (fn []
       [:div {:class :customer-block}
        (if-not (:edit @state)
@@ -68,7 +68,7 @@
           (for [group (:product-groups who)]
             [:div {:key (gensym)}
              [product-group-adder who group]])
-          [product-group-adder {}]]
+          [product-group-adder who []]]
 
          [:details {:class :client-orders}
           [:summary "Zamówienia"]

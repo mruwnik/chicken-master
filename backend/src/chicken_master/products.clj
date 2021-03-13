@@ -28,3 +28,15 @@
                  (into [(str "name NOT IN " (db/psql-list (keys new-products)))]
                        (->> new-products keys (map name)))))
   (get-all user-id))
+
+(defn update-products-mapping! [tx user-id table id products]
+  (let [id-key (-> table name (str "_id") keyword)
+        table (-> table name (str "_products") keyword)
+        products-map (products-map tx user-id products)]
+    (sql/delete! tx table {id-key id})
+    (sql/insert-multi! tx table
+                       [id-key :product_id :amount]
+                       (for [[n amount] products
+                             :let [product-id (-> n name products-map)]
+                             :when product-id]
+                         [id product-id amount]))))

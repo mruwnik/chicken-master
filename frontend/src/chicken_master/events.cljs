@@ -63,7 +63,8 @@
  ::log-error
  (fn [_ [_ error]]
    (.error js/console error)
-   (js/alert "Wystąpił błąd")))
+   (js/alert "Wystąpił błąd")
+   ))
 
 (re-frame/reg-event-fx
  ::failed-request

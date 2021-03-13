@@ -22,7 +22,9 @@
    :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
 (defn get-group-products [customers who]
-  (some->> customers (filter (comp #{who} :name)) first :product-groups))
+  (some->> customers (filter (comp #{who} :name))
+           first :product-groups
+           (reduce-kv #(assoc %1 %2 (:products %3)) {})))
 
 (defn order-form
   ([order] (order-form order #{:who :day :notes :products :group-products}))

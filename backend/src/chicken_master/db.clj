@@ -26,5 +26,6 @@
                           id user-id])))
 
 (comment
+  (create-user "bla" "bla")
   (create-user "siloa" "krach")
   (valid-user? "siloa" "krach"))

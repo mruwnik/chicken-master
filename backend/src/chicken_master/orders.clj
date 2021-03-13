@@ -60,16 +60,10 @@
   (jdbc/with-transaction [tx db/db-uri]
     (let [customer-id (or (:id who)
                           (customers/get-or-create-by-name tx user-id (:name who)))
-          products-map (products/products-map tx user-id products)
-          previous-day (some->> order :id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))
-          order-id (upsert-order! tx user-id customer-id order)]
-      (sql/delete! tx :order_products {:order_id order-id})
-      (sql/insert-multi! tx :order_products
-                         [:order_id :product_id :amount]
-                         (for [[n amount] products
-                               :let [product-id (-> n name products-map)]
-                               :when product-id]
-                           [order-id product-id amount]))
+          previous-day (some->> order :id (db/get-by-id tx user-id :orders) :orders/order_date (.toInstant))]
+      (products/update-products-mapping! tx user-id :order
+                                         (upsert-order! tx user-id customer-id order)
+                                         products)
       (orders-for-days tx user-id previous-day (some-> order :day t/parse-date)))))
 
 (defn delete! [user-id id]

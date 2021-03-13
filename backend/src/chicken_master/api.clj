@@ -20,7 +20,11 @@
 
 (defn get-customers [user-id] (get-values user-id [:customers]))
 (defn add-customer [{:keys [body basic-authentication]}]
-  (as-edn (some->> body :name (customers/create! basic-authentication))))
+  (some->> body :name (customers/create! basic-authentication) as-edn))
+(defn save-product-group [user-id customer-id body]
+  (customers/save-product-group user-id (Integer/parseInt customer-id) body)
+  (get-customers user-id))
+
 (defn delete-customer [user-id id]
   (->> id edn/read-string (customers/delete! user-id))
   (get-values user-id [:orders :customers]))
@@ -46,6 +50,8 @@
   (GET "/customers" [:as {user-id :basic-authentication}] (get-customers user-id))
   (POST "/customers" request (add-customer request))
   (DELETE "/customers/:id" [id :as {user-id :basic-authentication}] (delete-customer user-id id))
+  (POST "/customers/:id/product-group" [id :as {user-id :basic-authentication body :body}]
+        (save-product-group user-id id body))
 
   (GET "/products" request (get-products request))
   (POST "/products" request (save-products request))

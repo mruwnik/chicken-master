@@ -3,7 +3,7 @@ clojure -X:depstar uberjar
 
 cd ../frontend
 npx shadow-cljs release frontend
-clojure -A:garden -m chicken-master.css
+clojure -A:garden -m chicken-master.css compile
 
 cd ..
 scp backend/chicken-master.jar chickens:/srv/chickens/chicken-master.jar

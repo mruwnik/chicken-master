@@ -51,8 +51,7 @@
 
 (re-frame/reg-event-db ::hide-modal (fn [db [_ modal]] (assoc-in db [modal :show] nil)))
 (re-frame/reg-event-db ::start-loading (fn [db _] (update db :loading? inc)))
-(re-frame/reg-event-db ::stop-loading (fn [db _] (update db :loading? dec)))
-
+(re-frame/reg-event-db ::stop-loading (fn [db _] (update db :loading? #(-> % dec (max 0)))))
 (re-frame/reg-event-fx
  ::confirm-action
  (fn [_ [_ msg on-confirm-event & params]]
@@ -190,7 +189,7 @@
 
 (re-frame/reg-event-fx
  ::fetch-stock
- (fn [_ _]
+ (fn [_ [_ ]]
    {:dispatch [::start-loading]
     :http-xhrio (http-get "stock" {} ::process-stock)}))
 

@@ -10,10 +10,11 @@
 (re-frame/reg-sub ::available-customers (fn [db] (:customers db)))
 (re-frame/reg-sub ::orders (fn [db] (:orders db)))
 
-(re-frame/reg-sub ::show-edit-modal (fn [db] (-> db :order-edit :show)))
-(re-frame/reg-sub ::show-stock-modal (fn [db] (-> db :stock :show)))
+(defn- show-modal? [modal db] (and (-> modal db :show) (-> db :loading? zero?)))
+(re-frame/reg-sub ::show-edit-modal (partial show-modal? :order-edit))
+(re-frame/reg-sub ::show-stock-modal (partial show-modal? :stock))
+(re-frame/reg-sub ::show-settings-modal (partial show-modal? :settings))
 (re-frame/reg-sub ::show-customers-modal (fn [db] (-> db :clients :show)))
-(re-frame/reg-sub ::show-settings-modal (fn [db] (-> db :settings :show)))
 
 (re-frame/reg-sub ::editted-order (fn [db] (:order-edit db)))
 

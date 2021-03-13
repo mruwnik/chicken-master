@@ -15,9 +15,22 @@
       (merge #:orders{:id id :notes notes :status status :order_date date}
              #:customers{:id user_id :name user_name}
              {:products/name (name product) :order_products/amount amount}))
-    (merge #:orders{:id id :notes notes :status status :order_date date}
-           #:customers{:id user_id :name user_name}
-           {:products/name nil :order_products/amount nil})))
+    [(merge #:orders{:id id :notes notes :status status :order_date date}
+            #:customers{:id user_id :name user_name}
+            {:products/name nil :order_products/amount nil})]))
+
+(deftest structure-order-test
+  (testing "basic structure"
+    (is (= (sut/structure-order (raw-order-row))
+           {:id 1, :notes "note", :state :pending, :day "2020-01-01",
+            :who {:id 2, :name "mr blobby"},
+            :products {:eggs 12 :milk 3}})))
+
+  (testing "missing products"
+    (is (= (sut/structure-order (raw-order-row :products nil))
+           {:id 1, :notes "note", :state :pending, :day "2020-01-01",
+            :who {:id 2, :name "mr blobby"},
+            :products {}}))))
 
 (deftest test-get-order
   (testing "correct values returned"

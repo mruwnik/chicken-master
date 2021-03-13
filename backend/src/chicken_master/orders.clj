@@ -17,22 +17,23 @@
       (:orders/id (sql/insert! tx :orders (assoc order :user_id user-id))))))
 
 
-(defn- structure-order [items]
+(defn structure-order [items]
   {:id    (-> items first :orders/id)
    :notes (-> items first :orders/notes)
    :state (-> items first :orders/status keyword)
    :day   (-> items first :orders/order_date (.toInstant) str (subs 0 10))
    :who   {:id   (-> items first :customers/id)
            :name (-> items first :customers/name)}
-   :products (into {}
-                   (for [{:keys [order_products/amount products/name]} items]
-                     [(keyword name) amount]))})
+   :products (->> items
+                  (filter :products/name)
+                  (reduce (fn [coll {:keys [order_products/amount products/name]}]
+                            (assoc coll (keyword name) amount)) {}))})
 
 (def orders-query
   "SELECT o.id, o.notes, o.status, o.order_date, c.id, c.name, p.name, op.amount
    FROM orders o JOIN customers c ON o.customer_id = c.id
-   JOIN order_products op ON o.id = op.order_id
-   JOIN products p on p.id = op.product_id ")
+   LEFT OUTER JOIN order_products op ON o.id = op.order_id
+   LEFT OUTER JOIN products p on p.id = op.product_id ")
 
 (defn- get-orders [tx where params]
   (->> (into [(if where (str orders-query where) orders-query)] params)

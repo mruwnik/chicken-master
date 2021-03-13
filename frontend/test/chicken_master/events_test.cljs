@@ -33,7 +33,8 @@
      (set-db {:order-edit {:show true}
               :stock {:show true}
               :clients {:show true}
-              :settings {:show true}})
+              :settings {:show true}
+              :loading? 0})
      (is @(rf/subscribe [::subs/show-edit-modal]))
      (is @(rf/subscribe [::subs/show-stock-modal]))
      (is @(rf/subscribe [::subs/show-customers-modal]))
@@ -382,7 +383,7 @@
 (deftest stock-tests
   (testing "stock fetched before showing"
     (rf-test/run-test-sync
-     (set-db {:stock {}})
+     (set-db {:stock {} :loading? 0})
      (let [called (atom false)]
        (param-validator ::sut/fetch-stock #(reset! called true))
        (rf/dispatch [::sut/show-stock])
@@ -461,7 +462,7 @@
 (deftest test-settings
   (testing "settings get shown"
     (rf-test/run-test-sync
-     (set-db {:settings {}})
+     (set-db {:settings {} :loading? 0})
      (rf/dispatch [::sut/show-settings])
      (is @(rf/subscribe [::subs/show-settings-modal]))))
 

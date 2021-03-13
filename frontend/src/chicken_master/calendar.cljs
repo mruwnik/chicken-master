@@ -44,9 +44,9 @@
              (html/input :who "kto" {:required true
                                      :default (:name who)
                                      :list :customers
-                                     :on-blur #(->> % .-target .-value
-                                                    (get-group-products customers)
-                                                    (swap! state assoc :group-products))})
+                                     :on-change (fn [e]
+                                                  (if-let [products (->> e .-target .-value (get-group-products customers))]
+                                                    (swap! state assoc :group-products products)))})
              (into [:datalist {:id :customers}]
                    (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
              [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]]))

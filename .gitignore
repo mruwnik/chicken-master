@@ -16,4 +16,5 @@ frontend/.cpcache/
 # shadow-cljs cache, port files
 /frontend/.shadow-cljs/
 
+backups
 settings

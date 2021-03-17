@@ -4,7 +4,7 @@ After=postgres.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/systemctl restart chickens.service
+ExecStart=/bin/systemctl restart chickens.service
 
 [Install]
 WantedBy=multi-user.target

@@ -32,6 +32,8 @@
                        :editable-number-inputs (get-setting :editable-number-inputs false) ; only allow number modifications in the edit modal
                        :hide-fulfilled-orders (get-setting :hide-fulfilled-orders false)
 
+                       :prices (get-setting :prices true)
+
                        :backend-url (get-setting :backend-url
                                                  (if (= (.. js/window -location -href) "http://localhost:8280/")
                                                    "http://localhost:3000/api/"
@@ -92,6 +94,9 @@
    (input :show-order-notes "pokaż notki w zamówieniu" {:type :checkbox})
    (input :editable-number-inputs "możliwość bezposredniej edycji" {:type :checkbox})
    (input :hide-fulfilled-orders "ukryj wydane zamówienia" {:type :checkbox})
+
+   [:h3 "Ustawienia magazynu"]
+   (input :prices "pokaż ceny" {:type :checkbox})
 
    [:h3 "Ustawienia tyłu"]
    (input :backend-url "backend URL" {})

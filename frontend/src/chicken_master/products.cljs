@@ -14,6 +14,9 @@
   (let [div (js/Math.pow 10 digits)]
     (/ (js/Math.round (* num div)) div)))
 
+(defn format-price [price] (when price (round (/ price 100) 2)))
+(defn normalise-price [price] (when price (round (* price 100) 0)))
+
 (defn number-input [id label amount on-blur]
   (html/input id label
               {:type :number

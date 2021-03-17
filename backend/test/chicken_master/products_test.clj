@@ -8,14 +8,14 @@
 (deftest test-get-all
   (testing "query is correct"
     (with-redefs [sql/query (fn [_ query]
-                              (is (= query ["SELECT * FROM products WHERE deleted IS NULL AND user_id = ?" "1"]))
+                              (is (= query ["SELECT name, amount, price FROM products WHERE deleted IS NULL AND user_id = ?" "1"]))
                               [])]
       (sut/get-all "1")))
 
   (testing "correct format"
-    (with-redefs [sql/query (constantly [{:products/name "eggs" :products/amount 12}
-                                         {:products/name "milk" :products/amount 3}])]
-      (is (= (sut/get-all "1") {:eggs 12 :milk 3})))))
+    (with-redefs [sql/query (constantly [{:products/name "eggs" :products/amount 12 :products/price nil}
+                                         {:products/name "milk" :products/amount 3 :products/price 12}])]
+      (is (= (sut/get-all "1") {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 12}})))))
 
 (deftest test-products-map
   (testing "no products"
@@ -45,16 +45,33 @@
 (deftest test-update!
   (testing "each item gets updated"
     (let [inserts (atom [])
-          update-query "INSERT INTO products (name, amount, user_id) VALUES(?, ?, ?)\n                    ON CONFLICT (name, user_id) DO UPDATE SET amount = EXCLUDED.amount, deleted = NULL"]
+          update-query (str "INSERT INTO products (name, user_id, amount, price) VALUES(?, ?, ?, ?) "
+                            "ON CONFLICT (name, user_id) "
+                            "DO UPDATE SET deleted = NULL, amount = EXCLUDED.amount, price = EXCLUDED.price")]
       (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
                     jdbc/execute! #(swap! inserts conj %2)
                     sql/update! (constantly nil)
                     sql/query (constantly [])]
-        (sut/update! :user-id {:eggs 2 :milk 3 :cows 2})
-        (is (= (sort @inserts)
-               [[update-query "cows" 2 :user-id]
-                [update-query "eggs" 2 :user-id]
-                [update-query "milk" 3 :user-id]])))))
+        (sut/update! :user-id {:eggs {:amount 2 :price 1} :milk {:amount 3 :price 2} :cows {:amount 2 :price 3}})
+        (is (= (sort-by second @inserts)
+               [[update-query "cows" :user-id 2 3]
+                [update-query "eggs" :user-id 2 1]
+                [update-query "milk" :user-id 3 2]])))))
+
+  (testing "missing fields are ignored"
+    (let [inserts (atom [])]
+      (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
+                    jdbc/execute! #(swap! inserts conj %2)
+                    sql/update! (constantly nil)
+                    sql/query (constantly [])]
+        (sut/update! :user-id {:eggs {:amount 2} :milk {:amount 3} :cows {}})
+        (is (= (sort-by second @inserts)
+               [[(str "INSERT INTO products (name, user_id, amount) VALUES(?, ?, ?) "
+                      "ON CONFLICT (name, user_id) DO UPDATE "
+                      "SET deleted = NULL, amount = EXCLUDED.amount") "eggs" :user-id 2]
+                [(str "INSERT INTO products (name, user_id, amount) VALUES(?, ?, ?) "
+                      "ON CONFLICT (name, user_id) DO UPDATE SET "
+                      "deleted = NULL, amount = EXCLUDED.amount") "milk" :user-id 3]])))))
 
   (testing "non selected items get removed"
     (let [updates (atom [])]
@@ -62,16 +79,17 @@
                     jdbc/execute! (constantly nil)
                     sql/update! (partial swap! updates conj)
                     sql/query (constantly [])]
-        (sut/update! :user-id {:eggs 2 :milk 3 :cows 2})
+        (sut/update! :user-id {:eggs {:amount 2} :milk {:amount 3} :cows {:amount 2}})
         (is (= @updates [{} :products {:deleted true} ["name NOT IN (?, ?, ?)" "eggs" "milk" "cows"]])))))
 
   (testing "non selected items get removed"
     (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
                   jdbc/execute! (constantly nil)
                   sql/update! (constantly nil)
-                  sql/query (constantly [{:products/name "eggs" :products/amount 12}
-                                         {:products/name "milk" :products/amount 3}])]
-        (is (= (sut/update! :user-id {:eggs 2 :milk 3 :cows 2}) {:eggs 12 :milk 3})))))
+                  sql/query (constantly [{:products/name "eggs" :products/amount 12 :products/price 1}
+                                         {:products/name "milk" :products/amount 3 :products/price 2}])]
+      (is (= (sut/update! :user-id {:eggs {:amount 2} :milk {:amount 3} :cows {:amount 2}})
+             {:eggs {:amount 12 :price 1} :milk {:amount 3 :price 2}})))))
 
 (deftest update-products-mapping-test
   (testing "items get removed"

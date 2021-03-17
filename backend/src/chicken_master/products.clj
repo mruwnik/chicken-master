@@ -1,11 +1,12 @@
 (ns chicken-master.products
   (:require [next.jdbc :as jdbc]
             [next.jdbc.sql :as sql]
+            [clojure.string :as str]
             [chicken-master.db :as db]))
 
 (defn get-all [user-id]
-  (->> (sql/query db/db-uri ["SELECT * FROM products WHERE deleted IS NULL AND user_id = ?" user-id])
-       (map (fn [{:products/keys [name amount]}] [(keyword name) amount]))
+  (->> (sql/query db/db-uri ["SELECT name, amount, price FROM products WHERE deleted IS NULL AND user_id = ?" user-id])
+       (map (fn [{:products/keys [name amount price]}] [(keyword name) {:amount amount :price price}]))
        (into {})))
 
 (defn products-map [tx user-id products]
@@ -16,13 +17,25 @@
          (map #(vector (:products/name %) (:products/id %)))
          (into {}))))
 
+(defn- update-product [tx user-id prod values]
+  (let [to-update (seq (filter values [:amount :price]))
+        cols (->> to-update (map name) (str/join ", "))
+        params (concat [(name prod) user-id] (map values to-update))
+        updates (->> to-update
+                     (map name)
+                     (map #(str % " = EXCLUDED." %))
+                     (str/join ", "))
+        query (str "INSERT INTO products (name, user_id, " cols ")"
+                   " VALUES" (db/psql-list params)
+                   " ON CONFLICT (name, user_id) DO UPDATE"
+                   " SET deleted = NULL, " updates)]
+    (when to-update
+      (jdbc/execute! tx (concat [query] params)))))
+
 (defn update! [user-id new-products]
   (jdbc/with-transaction [tx db/db-uri]
-    (doseq [[prod amount] new-products]
-      (jdbc/execute! tx
-                     ["INSERT INTO products (name, amount, user_id) VALUES(?, ?, ?)
-                    ON CONFLICT (name, user_id) DO UPDATE SET amount = EXCLUDED.amount, deleted = NULL"
-                      (name prod) amount user-id]))
+    (doseq [[prod values] new-products]
+      (update-product tx user-id prod values))
     (sql/update! tx :products
                  {:deleted true}
                  (into [(str "name NOT IN " (db/psql-list (keys new-products)))]

@@ -38,7 +38,7 @@ html body .loader-container .loader {
   border: 5px solid #f3f3f3;
   position: relative;
   animation: spin 1s linear infinite;
-  border-top: 5px solid #3498db;
+  border-top: 5px solid #8bd81e;
   border-radius: 50%;
 }
 
@@ -104,7 +104,8 @@ html body .scroll-button {
   
   html body .menu-button {
     width: 100%;
-    font-size: 3em;
+    font-size: 1.5em;
+    font-variant: small-caps;
     display: inherit;
   }
   
@@ -175,11 +176,20 @@ html body .scroll-button {
 html body .calendar .day-header {
   border: 2px solid black;
   text-align: center;
-  font-size: 2em;
+  font-size: 1.5em;
+  font-variant: small-caps;
+}
+
+html body .calendar .day-header .day-name {
+  color: red;
+}
+
+html body .calendar .day-header .date {
+  color: purple;
 }
 
 html body .calendar .day.today {
-  border: 0.4em solid red;
+  border: 0.2em solid #6cb802;
 }
 
 html body .calendar .day {
@@ -206,11 +216,11 @@ html body .calendar .day .orders .order:hover .actions {
 }
 
 html body .calendar .day .orders .order.pending {
-  color: grey;
+  color: rgb(247, 176, 176);
 }
 
 html body .calendar .day .orders .order.fulfilled {
-  color: red;
+  color: rgb(114, 114, 114);
 }
 
 html body .calendar .day .orders .who {

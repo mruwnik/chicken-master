@@ -21,9 +21,9 @@
      [:.loader {:margin :auto
                 :position :relative
                 :top "40%"
-                :border "5px solid #f3f3f3"; /* Light grey */
-                :border-top "5px solid #3498db"; /* Blue */
-                :border-radius "50%";
+                :border "5px solid #f3f3f3"
+                :border-top "5px solid #8bd81e"
+                :border-radius "50%"
                 :width "30px"
                 :height "30px"
                 :animation "spin 1s linear infinite"}]]
@@ -63,7 +63,8 @@
      {:max-width "800px"}
      [:.scroll-bar {:display :none}]
      [:.menu-button {:width "100%"
-                     :font-size "3em"
+                     :font-size "1.5em"
+                     :font-variant "small-caps"
                      :display :inherit}]
      [:.popup
       [:.popup-content {
@@ -100,8 +101,11 @@
     [:.calendar
      [:.day-header {:border "2px solid black"
                     :text-align :center
-                    :font-size "2em"}]
-     [:.day.today {:border "0.4em solid red"}]
+                    :font-size "1.5em"
+                    :font-variant "small-caps"}
+      [:.day-name {:color :red}]
+      [:.date {:color :purple}]]
+     [:.day.today {:border "0.2em solid #6cb802"}]
      [:.day {:border "2px solid black"
              :overflow :auto}
 
@@ -114,8 +118,8 @@
        [:.actions {:display :none
                    :float :right}]
        [:.order:hover [:.actions {:display :inline}]]
-       [:.order.pending {:color :grey}]
-       [:.order.fulfilled {:color :red}]
+       [:.order.pending {:color "rgb(247, 176, 176)"}]
+       [:.order.fulfilled {:color "rgb(114, 114, 114)"}]
 
        [:.who {:font-size "18px"
                :font-weight :bold
@@ -155,7 +159,6 @@
       [:.order-date-picker {:display :inline-block :width "75%" :cursor :pointer}]
       [:.product-item-edit {:margin-left "1em"}]]]
     [:.customer-product-group-edit {:margin-left "1.2em" :padding "0.5em"}]
-
     ]]
 
   ; Chrome, Safari, Edge, Opera

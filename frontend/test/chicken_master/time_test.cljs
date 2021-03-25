@@ -61,13 +61,16 @@
 (deftest test-format-date
   (testing "don't show date"
     (with-redefs [sut/settings (atom {:date-format ""})]
-      (is (= (sut/format-date (new Date 2020 01 01)) ""))))
+      (is (= (sut/format-date (new Date 2020 01 01))
+             [:div {:dangerouslySetInnerHTML {:__html ""}}]))))
 
   (testing "without name"
     (with-redefs [sut/settings (atom {:date-format "%m/%d"})]
-      (is (= (sut/format-date (new Date 2020 01 01)) "2/1"))))
+      (is (= (sut/format-date (new Date 2020 01 01))
+             [:div {:dangerouslySetInnerHTML {:__html "2/1"}}]))))
 
   (testing "with name"
     (with-redefs [sut/settings (atom {:date-format "%D %m/%d"
                                       :day-names ["Niedz" "Pon" "Wt" "Śr" "Czw" "Pt" "Sob"]})]
-      (is (= (sut/format-date (new Date 2020 01 01)) "Sob 2/1")))))
+      (is (= (sut/format-date (new Date 2020 01 01))
+             [:div {:dangerouslySetInnerHTML {:__html "Sob 2/1"}}])))))

@@ -23,7 +23,7 @@
 
 (def default-settings {:first-day-offset (get-setting :first-day-offset 1) ; which is the first day of the week (add the offset to `day-names`)
                        :day-names (get-setting :day-names ["Niedz" "Pon" "Wt" "Śr" "Czw" "Pt" "Sob"]) ; how days should be displayed in the calendar view
-                       :date-format (get-setting :date-format "%D %m/%d") ; the format of the days (D - name, d - day, m - month)
+                       :date-format (get-setting :date-format "<span class=\"day-name\">%D</span> <span class=\"date\">%m/%d</span>") ; the format of the days (D - name, d - day, m - month)
 
                        :show-day-add-order (get-setting :show-day-add-order true) ; Show an add order button in each day
 

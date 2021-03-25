@@ -38,11 +38,13 @@
 (defn today? "true when `d1` is today" [d1] (same-day? (js/Date.) d1))
 
 (defn format-date [date]
-  (reduce (fn [date-str [from to]] (str/replace date-str from to))
-          (get @settings :date-format "%D %m/%d")
-          [["%d" (.getDate date)]
-           ["%m" (inc (.getMonth date))]
-           ["%D" (->> date .getDay (nth (get @settings :day-names)))]]))
+  ;; Yes, this is bad. Done on the assumption that the user can shoot themselves in the foot if they want to.
+  [:div {:dangerouslySetInnerHTML
+         {:__html (reduce (fn [date-str [from to]] (str/replace date-str from to))
+                          (get @settings :date-format "%D %m/%d")
+                          [["%d" (.getDate date)]
+                           ["%m" (inc (.getMonth date))]
+                           ["%D" (->> date .getDay (nth (get @settings :day-names)))]])}}])
 
 (defn iso-date [date] (.toIsoString ^js/goog.date.Date date true))
 

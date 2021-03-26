@@ -109,8 +109,10 @@
 
                     sql/insert-multi! (fn [_tx table cols products]
                                         (is (= table :bla_products))
-                                        (is (= cols [:bla_id :product_id :amount]))
-                                        (is (= products [[item-id 1 34]
-                                                         [item-id 2 25]
-                                                         [item-id 3 13]])))]
-        (sut/update-products-mapping! :tx 123 :bla item-id {:eggs 34 :milk 25 :carrots 13})))))
+                                        (is (= cols [:bla_id :product_id :amount :price]))
+                                        (is (= products [[item-id 1 34 nil]
+                                                         [item-id 2 25 32]
+                                                         [item-id 3 13 nil]])))]
+        (sut/update-products-mapping!
+         :tx 123 :bla item-id
+         {:eggs {:amount 34 :price nil} :milk {:amount 25 :price 32} :carrots {:amount 13}})))))

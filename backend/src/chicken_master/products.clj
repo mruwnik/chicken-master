@@ -48,8 +48,8 @@
         products-map (products-map tx user-id products)]
     (sql/delete! tx table {id-key id})
     (sql/insert-multi! tx table
-                       [id-key :product_id :amount]
-                       (for [[n amount] products
+                       [id-key :product_id :amount :price]
+                       (for [[n {:keys [amount price]}] products
                              :let [product-id (-> n name products-map)]
                              :when product-id]
-                         [id product-id amount]))))
+                         [id product-id amount price]))))

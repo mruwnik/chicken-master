@@ -32,7 +32,7 @@
                        :editable-number-inputs (get-setting :editable-number-inputs false) ; only allow number modifications in the edit modal
                        :hide-fulfilled-orders (get-setting :hide-fulfilled-orders false)
 
-                       :prices (get-setting :prices true)
+                       :prices (get-setting :prices false)
 
                        :backend-url (get-setting :backend-url
                                                  (if (= (.. js/window -location -href) "http://localhost:8280/")

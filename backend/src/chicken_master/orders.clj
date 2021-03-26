@@ -26,11 +26,11 @@
            :name (-> items first :customers/name)}
    :products (->> items
                   (filter :products/name)
-                  (reduce (fn [coll {:keys [order_products/amount products/name]}]
-                            (assoc coll (keyword name) amount)) {}))})
+                  (reduce (fn [coll {:keys [order_products/amount order_products/price products/name]}]
+                            (assoc coll (keyword name) {:amount amount :price price})) {}))})
 
 (def orders-query
-  "SELECT o.id, o.notes, o.status, o.order_date, c.id, c.name, p.name, op.amount
+  "SELECT o.id, o.notes, o.status, o.order_date, c.id, c.name, p.name, op.amount, op.price
    FROM orders o JOIN customers c ON o.customer_id = c.id
    LEFT OUTER JOIN order_products op ON o.id = op.order_id
    LEFT OUTER JOIN products p on p.id = op.product_id ")
@@ -84,7 +84,7 @@
                      "fulfilled" "-"
                      "waiting"   "+")]
       (when (not= (:state order) (keyword state))
-        (doseq [[prod amount] (:products order)]
+        (doseq [[prod {:keys [amount]}] (:products order)]
           (jdbc/execute-one! tx
                              [(str "UPDATE products SET amount = amount " operator " ? WHERE name = ?")
                               amount (name prod)]))

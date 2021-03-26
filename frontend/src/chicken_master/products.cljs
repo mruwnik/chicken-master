@@ -4,6 +4,7 @@
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
    [chicken-master.html :as html]
+   [chicken-master.config :as config]
    [chicken-master.subs :as subs]))
 
 (defn num-or-nil [val]
@@ -31,11 +32,18 @@
        (map (fn [[k v]] [(str/split k "-") v]))
        (group-by (comp last first))
        (map #(sort-by first (second %)))
-       (map (fn [[[_ amount] [_ product]]] [(keyword product) (num-or-nil amount)]))
-       (remove (comp nil? first))
-       (remove (comp zero? second))
+       (map (partial reduce (fn [col [[k _] val]] (assoc col (keyword k) val)) {}))
+       (filter :product)
+       (map (fn [{:keys [product amount price]}]
+              [product {:amount (num-or-nil amount)
+                        :price (-> price num-or-nil normalise-price)}]))
+       (remove (comp zero? :amount second))
        (group-by first)
-       (map (fn [[product items]] [product (->> items (map last) (reduce +))]))
+       (map (fn [[product items]]
+              [(keyword product) (->> items
+                                      (map second)
+                                      (map (partial reduce-kv #(if %3 (assoc %1 %2 %3) %1) {}))
+                                      (apply merge-with +))]))
        (into {})))
 
 (defn product-item [available state what]
@@ -51,8 +59,14 @@
        (for [product (->> available (concat [what]) (remove nil?) sort vec)]
          [:option {:key (gensym) :value product} (name product)])
        [:option {:key (gensym) :value nil} "-"]]]
-     (number-input (str "amount-" id) nil (@state what)
-                   #(swap! state assoc what (-> % .-target .-value num-or-nil)))]))
+     (number-input (str "amount-" id) nil (get-in @state [what :amount])
+                   #(swap! state assoc-in [what :amount] (-> % .-target .-value num-or-nil)))
+     (when (config/settings :prices)
+       [:div {:class :stock-product-price}
+        (number-input (str "price-" id) "cena" (format-price (get-in @state [what :price]))
+                      #(swap! state assoc-in
+                              [what :price]
+                              (some-> % .-target .-value num-or-nil normalise-price)))])]))
 
 (defn products-edit [state & {:keys [available-prods getter-fn]
                               :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
@@ -72,7 +86,7 @@
                           :on-click #(getter-fn (dissoc @state nil))} "ok"])
           products)))))
 
-(defn format-product [settings [product amount]]
+(defn format-product [settings [product {:keys [amount price]}]]
   [:div {:key (gensym) :class :product}
    [:span {:class :product-name} product]
    (if (settings :editable-number-inputs)

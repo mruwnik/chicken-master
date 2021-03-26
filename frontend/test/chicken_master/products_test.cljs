@@ -44,3 +44,40 @@
   (testing "nil prices are handled"
     (is (nil? (sut/format-price nil)))
     (is (nil? (sut/normalise-price nil)))))
+
+(deftest collect-products-test
+  (testing "no values"
+    (is (= (sut/collect-products []) {})))
+
+  (testing "non product fields are ignored"
+    (is (= (sut/collect-products [["day" "2021-03-23"] ["who-id" ""]]) {})))
+
+  (testing "items with 0 are ignored"
+    (is (= (sut/collect-products [["amount-G__125" "0"] ["product-G__125" "-"]]) {})))
+
+  (testing "products get extracted"
+    (is (= (sut/collect-products
+            [["amount-G__122" "33"] ["amount-G__119" "23"]
+             ["product-G__119" "cheese"] ["product-G__122" "eggs"]])
+           {:eggs {:amount 33} :cheese {:amount 23}})))
+
+  (testing "prices are handled"
+    (is (= (sut/collect-products
+            [["amount-G__122" "33"] ["amount-G__119" "23"] ["price-G__119" "51"]
+             ["product-G__119" "cheese"] ["product-G__122" "eggs"]])
+           {:eggs {:amount 33} :cheese {:amount 23 :price 5100}})))
+
+  (testing "multiple items of the same type get summed"
+    (is (= (sut/collect-products
+            [["amount-G__122" "33"] ["amount-G__119" "23"]
+             ["product-G__119" "cheese"] ["product-G__122" "cheese"]])
+           {:cheese {:amount 56}})))
+
+  (testing "all together"
+    (is (= (sut/collect-products
+            [["price-G__122" "19.99"] ["amount-G__122" "33"] ["amount-G__125" "0"]
+             ["product-G__125" "-"] ["amount-G__119" "23"]
+             ["product-G__119" "cheese"] ["product-G__122" "eggs"]
+             ["day" "2021-03-23"]
+             ["who-id" ""]])
+           {:eggs {:amount 33 :price 1999} :cheese {:amount 23}}))))

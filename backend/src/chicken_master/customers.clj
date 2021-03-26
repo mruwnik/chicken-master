@@ -8,7 +8,9 @@
 
 (defn insert-products [coll {:keys [id name]} products]
   (->> products
-       (reduce #(assoc %1 (-> %2 :products/name keyword) (:customer_group_products/amount %2)) {})
+       (reduce #(assoc %1 (-> %2 :products/name keyword)
+                       {:amount (:customer_group_products/amount %2)
+                        :price (:customer_group_products/price %2)}) {})
        (assoc {:id id} :products)
        (assoc coll name)))
 

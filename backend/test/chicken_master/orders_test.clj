@@ -9,22 +9,23 @@
 
 (defn raw-order-row [& {:keys [id notes status date user_id user_name products]
                         :or {id 1 notes "note" status "pending" date #inst "2020-01-01"
-                             user_id 2 user_name "mr blobby" products {:eggs 12 :milk 3}}}]
+                             user_id 2 user_name "mr blobby"
+                             products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}}]
   (if products
-    (for [[product amount] products]
+    (for [[product {:keys [amount price]}] products]
       (merge #:orders{:id id :notes notes :status status :order_date date}
              #:customers{:id user_id :name user_name}
-             {:products/name (name product) :order_products/amount amount}))
+             {:products/name (name product) :order_products/price price :order_products/amount amount}))
     [(merge #:orders{:id id :notes notes :status status :order_date date}
             #:customers{:id user_id :name user_name}
-            {:products/name nil :order_products/amount nil})]))
+            {:products/name nil :order_products/price nil :order_products/amount nil})]))
 
 (deftest structure-order-test
   (testing "basic structure"
     (is (= (sut/structure-order (raw-order-row))
            {:id 1, :notes "note", :state :pending, :day "2020-01-01",
             :who {:id 2, :name "mr blobby"},
-            :products {:eggs 12 :milk 3}})))
+            :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}})))
 
   (testing "missing products"
     (is (= (sut/structure-order (raw-order-row :products nil))
@@ -41,7 +42,7 @@
       (is (= (sut/get-order :tx "1" 123)
              {:id 1, :notes "note", :state :pending, :day "2020-01-01",
               :who {:id 2, :name "mr blobby"},
-              :products {:eggs 12 :milk 3}}))))
+              :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}))))
 
   (testing "Only 1 item returned"
     (with-redefs [sql/query (fn [_ [query & params]]
@@ -52,7 +53,7 @@
       (is (= (sut/get-order :tx "1" 123)
              {:id 1, :notes "note", :state :pending, :day "2020-01-01",
               :who {:id 2, :name "mr blobby"},
-              :products {:eggs 12 :milk 3}})))))
+              :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}})))))
 
 (deftest test-get-all
   (testing "correct values returned"
@@ -67,22 +68,22 @@
       (is (= (sut/get-all "1")
              {"2020-01-01" [{:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                              :who {:id 2, :name "mr blobby"},
-                             :products {:eggs 12 :milk 3}}
+                             :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}
                             {:id 3, :notes "note", :state :pending, :day "2020-01-01",
                              :who {:id 43, :name "John"},
-                             :products {:eggs 12 :milk 3}}
+                             :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}
                             {:id 4, :notes "note", :state :pending, :day "2020-01-01",
                              :who {:id 2, :name "mr blobby"},
-                             :products {:eggs 12 :milk 3}}]
+                             :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]
               "2020-01-03" [{:id 2, :notes "note", :state :pending, :day "2020-01-03",
                              :who {:id 2, :name "mr blobby"},
-                             :products {:eggs 12 :milk 3}}]})))))
+                             :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]})))))
 
 (deftest test-replace!
   (testing "basic replace order"
     (let [order {:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                  :who {:id 2, :name "mr blobby"},
-                 :products {:eggs 12 :milk 3}}]
+                 :products {:eggs {:amount 12 :price 43} :milk {:amount 3 :price nil}}}]
       (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
                     jdbc/execute-one! (constantly nil)
                     products/products-map (constantly {"eggs" 1 "milk" 2})
@@ -91,23 +92,23 @@
                                  (is (= table :order_products))
                                  (is (= by {:order_id (:id order)})))
                     sql/insert-multi! (fn [_ _ cols values]
-                                        (is (= cols [:order_id :product_id :amount]))
-                                        (is (= values [[1 1 12] [1 2 3]])))
+                                        (is (= cols [:order_id :product_id :amount :price]))
+                                        (is (= values [[1 1 12 43] [1 2 3 nil]])))
                     sql/query (constantly (concat
                                            (raw-order-row :id 1 :status "waiting")
                                            (raw-order-row :id 4)))]
     (is (= (sut/replace! :user-id order)
            {"2020-01-01" [{:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"},
-                           :products {:eggs 12 :milk 3}}
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}
                           {:id 4, :notes "note", :state :pending, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"},
-                           :products {:eggs 12 :milk 3}}]})))))
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]})))))
 
   (testing "replace order from different day"
     (let [order {:id 1, :notes "note", :state :waiting, :day "2020-01-02",
                  :who {:id 2, :name "mr blobby"},
-                 :products {:eggs 12 :milk 3}}]
+                 :products {:eggs {:amount 12 :price 65} :milk {:amount 3 :price nil}}}]
       (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
                     jdbc/execute-one! (constantly {:orders/order_date #inst "2020-01-01"})
                     products/products-map (constantly {"eggs" 1 "milk" 2})
@@ -116,23 +117,23 @@
                                  (is (= table :order_products))
                                  (is (= by {:order_id (:id order)})))
                     sql/insert-multi! (fn [_ _ cols values]
-                                        (is (= cols [:order_id :product_id :amount]))
-                                        (is (= values [[1 1 12] [1 2 3]])))
+                                        (is (= cols [:order_id :product_id :amount :price]))
+                                        (is (= values [[1 1 12 65] [1 2 3 nil]])))
                     sql/query (constantly (concat
                                            (raw-order-row :id 1 :status "waiting" :date #inst "2020-01-02")
                                            (raw-order-row :id 4)))]
     (is (= (sut/replace! :user-id order)
            {"2020-01-01" [{:id 4, :notes "note", :state :pending, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"},
-                           :products {:eggs 12 :milk 3}}]
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]
             "2020-01-02" [{:id 1, :notes "note", :state :waiting, :day "2020-01-02",
                           :who {:id 2, :name "mr blobby"},
-                          :products {:eggs 12 :milk 3}}]})))))
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]})))))
 
   (testing "unknown products are ignored"
     (let [order {:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                  :who {:id 2, :name "mr blobby"},
-                 :products {:eggs 12 :milk 3}}]
+                 :products {:eggs {:amount 12 :price 89} :milk {:amount 3 :price nil}}}]
       (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
                     jdbc/execute-one! (constantly nil)
                     products/products-map (constantly {"eggs" 1 "candles" 2})
@@ -141,18 +142,18 @@
                                  (is (= table :order_products))
                                  (is (= by {:order_id (:id order)})))
                     sql/insert-multi! (fn [_ _ cols values]
-                                        (is (= cols [:order_id :product_id :amount]))
-                                        (is (= values [[1 1 12]])))
+                                        (is (= cols [:order_id :product_id :amount :price]))
+                                        (is (= values [[1 1 12 89]])))
                     sql/query (constantly (concat
                                            (raw-order-row :id 1 :status "waiting")
                                            (raw-order-row :id 4)))]
     (is (= (sut/replace! :user-id order)
            {"2020-01-01" [{:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"},
-                           :products {:eggs 12 :milk 3}}
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}
                           {:id 4, :notes "note", :state :pending, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"},
-                           :products {:eggs 12 :milk 3}}]}))))))
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))))))
 
 (deftest test-delete!
   (testing "non deleted items from day are returned"
@@ -165,7 +166,7 @@
     (is (= (sut/delete! :user-id 1)
            {"2020-01-01" [{:id 4, :notes "note", :state :pending, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"},
-                           :products {:eggs 12 :milk 3}}]}))))
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))))
 
   (testing "nothing returned if no date set for the given order"
     (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
@@ -188,7 +189,7 @@
         (is (= (sut/change-state! :user-id 1 "fulfilled")
                {"2020-01-01" [{:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                                :who {:id 2, :name "mr blobby"},
-                               :products {:eggs 12 :milk 3}}]}))
+                               :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))
         (is (= @updates [["UPDATE products SET amount = amount - ? WHERE name = ?" 12 "eggs"]
                          ["UPDATE products SET amount = amount - ? WHERE name = ?" 3 "milk"]])))))
 
@@ -200,7 +201,7 @@
         (is (= (sut/change-state! :user-id 1 "waiting")
                {"2020-01-01" [{:id 1, :notes "note", :state :waiting, :day "2020-01-01",
                                :who {:id 2, :name "mr blobby"},
-                               :products {:eggs 12 :milk 3}}]}))
+                               :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))
         (is (= @updates [])))))
 
   (testing "unknown states cause an exception"

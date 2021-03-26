@@ -9,7 +9,9 @@
   CONSTRAINT fk_product FOREIGN KEY(product_id) REFERENCES products(id)
 )"
       "ALTER TABLE products ADD price BIGINT"
-      "ALTER TABLE order_products ADD price BIGINT"]
+      "ALTER TABLE order_products ADD price BIGINT"
+      "ALTER TABLE customer_group_products ADD price BIGINT"]
  :down ["ALTER TABLE products DROP COLUMN price"
         "ALTER TABLE order_products DROP COLUMN price"
+        "ALTER TABLE customer_group_products DROP COLUMN price"
         "DROP TABLE customer_products"]}

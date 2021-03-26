@@ -15,10 +15,10 @@
     (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble"
                                   "day" "2020-10-10"
                                   "product-eggs" "eggs" "amount-eggs" "12"
-                                  "product-cows" "cows" "amount-cows" "22"
+                                  "product-cows" "cows" "amount-cows" "22" "price-cows" "2.32"
                                   "product-milk" "milk" "amount-milk" "3.2"})
            {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
-            :products {:eggs 12 :cows 22 :milk 3.2}})))
+            :products {:eggs {:amount 12} :cows {:amount 22 :price 232} :milk {:amount 3.2}}})))
 
   (testing "duplicate products"
     (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble"
@@ -27,7 +27,8 @@
                                   "product-cows1" "cows" "amount-cows1" "1"
                                   "product-cows2" "cows" "amount-cows2" "2"
                                   "product-milk" "milk" "amount-milk" "3.2"})
-           {:who {:name "bla" :id 123} :day nil :notes "ble" :products {:eggs 24 :cows 3 :milk 3.2}})))
+           {:who {:name "bla" :id 123} :day nil :notes "ble"
+            :products {:eggs {:amount 24} :cows {:amount 3} :milk {:amount 3.2}}})))
 
   (testing "unselected are ignored"
     (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble" "day" "2020-10-10"
@@ -36,7 +37,17 @@
                                   "product-bad2" "" "amount-bad2" "1"
                                   "product-milk" "milk" "amount-milk" "3.2"
                                   "product-bad3" "" "amount-bad3" "2"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :products {:eggs 12 :milk 3.2}})))
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
+            :products {:eggs {:amount 12} :milk {:amount 3.2}}})))
+
+  (testing "prices are handled"
+    (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble" "day" "2020-10-10"
+                                  "product-eggs" "eggs" "amount-eggs" "12" "price-eggs" "4.31"
+                                  "product-eggs1" "eggs" "amount-eggs1" "0" "price-eggs1" "1.0"
+                                  "product-cow" "cow" "amount-cow" "0"
+                                  "product-milk" "milk" "amount-milk" "3.2"})
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
+            :products {:eggs {:amount 12 :price 431} :milk {:amount 3.2}}})))
 
   (testing "items with 0 are removed"
     (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble" "day" "2020-10-10"
@@ -44,7 +55,8 @@
                                   "product-eggs1" "eggs" "amount-eggs1" "0"
                                   "product-cow" "cow" "amount-cow" "0"
                                   "product-milk" "milk" "amount-milk" "3.2"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :products {:eggs 12 :milk 3.2}}))))
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
+            :products {:eggs {:amount 12} :milk {:amount 3.2}}}))))
 
 (def customers
   [{:id 1 :name "mr blobby" :product-groups {"group 1" {:products {:eggs 1 :carrots 2}}

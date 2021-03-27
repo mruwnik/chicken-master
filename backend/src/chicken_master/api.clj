@@ -24,6 +24,9 @@
 (defn save-product-group [user-id customer-id body]
   (customers/save-product-group user-id (Integer/parseInt customer-id) body)
   (get-customers user-id))
+(defn save-customer-prices [user-id customer-id body]
+  (customers/save-prices user-id (Integer/parseInt customer-id) body)
+  (get-customers user-id))
 
 (defn delete-customer [user-id id]
   (->> id edn/read-string (customers/delete! user-id))
@@ -52,6 +55,8 @@
   (DELETE "/customers/:id" [id :as {user-id :basic-authentication}] (delete-customer user-id id))
   (POST "/customers/:id/product-group" [id :as {user-id :basic-authentication body :body}]
         (save-product-group user-id id body))
+  (POST "/customers/:id/prices" [id :as {user-id :basic-authentication body :body}]
+        (save-customer-prices user-id id body))
 
   (GET "/products" request (get-products request))
   (POST "/products" request (save-products request))

@@ -1,7 +1,56 @@
 (ns chicken-master.calendar-test
   (:require
    [chicken-master.calendar :as sut]
+   [day8.re-frame.test :as rf-test]
+   [re-frame.core :as rf]
    [cljs.test :refer-macros [deftest is testing]]))
+
+(defn set-db [updates]
+  (rf/reg-event-db
+   ::merge-db
+   (fn [db [_ incoming]] (merge db incoming)))
+  (rf/dispatch [::merge-db updates]))
+
+(deftest calc-order-prices-test
+  (let [order {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"}]
+    (testing "no products"
+      (is (= (sut/calc-order-prices order) (assoc order :products nil))))
+
+    (testing "prices set in order"
+      (is (= (sut/calc-order-prices (assoc order :products {:eggs {:amount 12 :price 2}}))
+             (assoc order :products {:eggs {:amount 12 :price 2 :final-price 24}}))))
+
+  (testing "prices set per customer"
+    (rf-test/run-test-sync
+     (set-db {:customers [{:id 123 :prices {:eggs {:price 3}}}]})
+     (is (= (sut/calc-order-prices (assoc order :products {:eggs {:amount 12}}))
+            (assoc order :products {:eggs {:amount 12 :final-price 36}})))))
+
+  (testing "prices set globally"
+    (rf-test/run-test-sync
+     (set-db {:products {:eggs {:price 4}}})
+     (is (= (sut/calc-order-prices (assoc order :products {:eggs {:amount 12}}))
+            (assoc order :products {:eggs {:amount 12 :final-price 48}})))))
+
+  (testing "no price set"
+    (rf-test/run-test-sync
+     (set-db {:products {}})
+     (is (= (sut/calc-order-prices (assoc order :products {:eggs {:amount 12}}))
+            (assoc order :products {:eggs {:amount 12 :final-price nil}})))))
+
+  (testing "all together"
+    (rf-test/run-test-sync
+     (set-db {:products {:eggs {:price 4}}
+              :customers [{:id 123 :prices {:cows {:price 3}}}]})
+     (is (= (sut/calc-order-prices
+             (assoc order :products {:eggs {:amount 12}
+                                     :cows {:amount 2}
+                                     :milk {:amount 3 :price 5}
+                                     :carrots {:amount 6}}))
+            (assoc order :products {:eggs {:amount 12 :final-price 48}
+                                    :cows {:amount 2 :final-price 6}
+                                    :milk {:amount 3 :price 5 :final-price 15}
+                                    :carrots {:amount 6 :final-price nil}})))))))
 
 (deftest format-raw-order-test
   (testing "no products"

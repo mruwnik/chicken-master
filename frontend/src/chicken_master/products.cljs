@@ -4,7 +4,6 @@
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
    [chicken-master.html :as html]
-   [chicken-master.config :as config]
    [chicken-master.subs :as subs]))
 
 (defn num-or-nil [val]
@@ -46,30 +45,31 @@
                                       (apply merge-with +))]))
        (into {})))
 
-(defn product-item [available state what]
+(defn product-item [available state fields what]
   (let [id (gensym)]
     [:div {:class :product-item-edit :key (gensym)}
      [:div {:class :input-item}
       ;; [:label {:for :product} "co"]
       [:select {:name (str "product-" id) :id :product :defaultValue (or (some-> what name) "-")
                 :on-change #(let [prod (-> % .-target .-value keyword)]
-                              (if-not (= prod :-)
-                                (swap! state assoc prod (+ (@state prod) (@state what))))
+                              (if-not (= prod :-) (swap! state assoc prod {}))
                               (swap! state dissoc what))}
        (for [product (->> available (concat [what]) (remove nil?) sort vec)]
          [:option {:key (gensym) :value product} (name product)])
        [:option {:key (gensym) :value nil} "-"]]]
-     (number-input (str "amount-" id) nil (get-in @state [what :amount])
-                   #(swap! state assoc-in [what :amount] (-> % .-target .-value num-or-nil)))
-     (when (config/settings :prices)
+     (when (:amount fields)
+       (number-input (str "amount-" id) nil (get-in @state [what :amount])
+                     #(swap! state assoc-in [what :amount] (-> % .-target .-value num-or-nil))))
+     (when (:price fields)
        [:div {:class :stock-product-price}
         (number-input (str "price-" id) "cena" (format-price (get-in @state [what :price]))
                       #(swap! state assoc-in
                               [what :price]
                               (some-> % .-target .-value num-or-nil normalise-price)))])]))
 
-(defn products-edit [state & {:keys [available-prods getter-fn]
-                              :or {available-prods @(re-frame/subscribe [::subs/available-products])}}]
+(defn products-edit [state & {:keys [available-prods getter-fn fields]
+                              :or {available-prods @(re-frame/subscribe [::subs/available-products])
+                                   fields #{:amount :price}}}]
   (let [all-product-names (-> available-prods keys set)]
     (swap! state #(or % {}))
     (fn []
@@ -78,7 +78,7 @@
                             (conj (->> @state (map first) vec) nil)
                             (map first @state))
             products (->> product-names
-                          (map (partial product-item available state))
+                          (map (partial product-item available state fields))
                           (into [:div {:class :product-items-edit}]))]
         (if getter-fn
           (conj products
@@ -86,12 +86,21 @@
                           :on-click #(getter-fn (dissoc @state nil))} "ok"])
           products)))))
 
-(defn format-product [settings [product {:keys [amount price]}]]
+(defn calc-price [who what price amount]
+  (when-let [price (or price
+                       (get-in @(re-frame/subscribe [::subs/customer-prices]) [who what])
+                       (get-in @(re-frame/subscribe [::subs/available-products]) [what :price]))]
+    (* amount price)))
+
+(defn format-product [settings [product {:keys [amount final-price]}]]
   [:div {:key (gensym) :class :product}
    [:span {:class :product-name} product]
    (if (settings :editable-number-inputs)
      (number-input (str "amount-" product) "" amount nil)
-     [:span {:class :product-amount} amount])])
+     [:span {:class :product-amount} amount])
+   (when (settings :prices)
+     [:span {:class :product-price}
+      (format-price final-price)])])
 
 (defn item-adder [& {:keys [type value callback button class]
                      :or {type :text value "" button nil}}]

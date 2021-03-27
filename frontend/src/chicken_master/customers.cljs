@@ -5,6 +5,7 @@
    [chicken-master.products :as prod]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]
+   [chicken-master.config :as config]
    [chicken-master.events :as event]))
 
 (defn order-adder [order who]
@@ -47,6 +48,16 @@
                          (when (and (:name @state) (:products @state))
                            (re-frame/dispatch [::event/save-product-group (:id who) (assoc @state :products %)])))]])])))
 
+(defn price-adder [who]
+  (let [state (reagent/atom (:prices who))]
+    (fn []
+      [:details {:class :customer-prices}
+       [:summary "Ceny"]
+       [prod/products-edit state
+        :fields #{:price}
+        :getter-fn #(when (seq @state)
+                      (re-frame/dispatch [::event/save-customer-prices (:id who) @state]))]])))
+
 
 (defn show-customers []
   (html/modal
@@ -57,12 +68,16 @@
     (let [client-orders (->> @(re-frame/subscribe [::subs/orders])
                              vals
                              (group-by #(get-in % [:who :id])))]
-      (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
-        [:details {:class "client" :key (gensym)}
-         [:summary [:span name [:button {:on-click #(re-frame/dispatch
-                                                     [::event/confirm-action
-                                                      "na pewno usunąć?"
-                                                      ::event/remove-customer id])} "-"]]]
+      (doall
+       (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
+         [:details {:class :client :key (gensym)}
+          [:summary [:span name [:button {:on-click #(re-frame/dispatch
+                                                      [::event/confirm-action
+                                                       "na pewno usunąć?"
+                                                       ::event/remove-customer id])} "-"]]]
+          (when (config/settings :prices)
+            [price-adder who])
+
          [:details {:class :customer}
           [:summary "Stałe zamówienia"]
           (for [group (:product-groups who)]
@@ -70,9 +85,9 @@
              [product-group-adder who group]])
           [product-group-adder who []]]
 
-         [:details {:class :client-orders}
-          [:summary "Zamówienia"]
-          [order-adder who]
-          (for [order (reverse (sort-by :day (client-orders id)))]
-            [order-adder (assoc order :key (gensym)) who])]]))]
+          [:details {:class :client-orders}
+           [:summary "Zamówienia"]
+           [order-adder who]
+           (for [order (reverse (sort-by :day (client-orders id)))]
+             [order-adder (assoc order :key (gensym)) who])]])))]
    :class :wide-popup))

@@ -4,6 +4,7 @@
    [reagent.core :as reagent]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]
+   [chicken-master.config :as config]
    [chicken-master.products :as prod]
    [chicken-master.events :as event]
    [chicken-master.time :as time]))
@@ -25,6 +26,13 @@
   (some->> customers (filter (comp #{who} :name))
            first :product-groups
            (reduce-kv #(assoc %1 %2 (:products %3)) {})))
+
+(defn calc-order-prices [{:keys [who products] :as order}]
+  (->> products
+       (reduce-kv (fn [coll prod {:keys [amount price]}]
+                    (assoc-in coll [prod :final-price]
+                              (prod/calc-price (:id who) prod price amount))) products)
+       (assoc order :products)))
 
 (defn order-form
   ([order] (order-form order #{:who :day :notes :products :group-products}))
@@ -59,7 +67,9 @@
           (html/input :notes "notka"
                       {:default (:notes @state)}))
         (when (:products fields)
-          [prod/products-edit (:products @state) :available-prods available-prods])]))))
+          [prod/products-edit (:products @state)
+           :available-prods available-prods
+           :fields (if (config/settings :prices) #{:amount :price} #{:amount})])]))))
 
 (defn edit-order []
   (html/modal
@@ -68,7 +78,7 @@
    ;; On success
    :on-submit (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
-(defn format-order [settings {:keys [id who day hour notes products state]}]
+(defn format-order [settings {:keys [id who day hour notes state products]}]
   [:div {:class [:order state] :key (gensym)
          :draggable true
          :on-drag-start #(-> % .-dataTransfer (.setData "text" id))}
@@ -93,30 +103,33 @@
         (into [:div {:class :products}]))])
 
 (defn day [settings [date orders]]
-  [:div {:class [:day (when (-> date time/parse-date time/today?) :today)]
-         :on-drag-over #(.preventDefault %)
-         :on-drop #(let [id (-> % .-dataTransfer (.getData "text") prod/num-or-nil)]
-                     (.preventDefault %)
-                     (re-frame/dispatch [::event/move-order id date]))}
-   [:div {:class :day-header} (-> date time/parse-date time/format-date)]
-   [:div
-    [:div {:class :orders}
-     (if (settings :hide-fulfilled-orders)
-       (->> orders (remove (comp #{:fulfilled} :state)) (map (partial format-order settings)))
-       (map (partial format-order settings) orders))
-     (when (settings :show-day-add-order)
-       [:button {:type :button
-                 :on-click #(re-frame/dispatch [::event/edit-order date])} "+"])
-     (when (seq (map :products orders))
-       [:div {:class :summary}
-        [:hr {:class :day-seperator}]
-        [:div {:class :header} "w sumie:"]
-        (->> orders
-             (map :products)
-             (apply merge-with +)
-             (sort-by first)
-             (map (partial prod/format-product settings))
-             (into [:div {:class :products-sum}]))])]]])
+  (let [orders (map calc-order-prices orders)]
+    [:div {:class [:day (when (-> date time/parse-date time/today?) :today)]
+           :on-drag-over #(.preventDefault %)
+           :on-drop #(let [id (-> % .-dataTransfer (.getData "text") prod/num-or-nil)]
+                       (.preventDefault %)
+                       (re-frame/dispatch [::event/move-order id date]))}
+     [:div {:class :day-header} (-> date time/parse-date time/format-date)]
+     [:div
+      [:div {:class :orders}
+       (->> (if (settings :hide-fulfilled-orders)
+              (remove (comp #{:fulfilled} :state) orders)
+              orders)
+            (map (partial format-order settings))
+            doall)
+       (when (settings :show-day-add-order)
+         [:button {:type :button
+                   :on-click #(re-frame/dispatch [::event/edit-order date])} "+"])
+       (when (seq (map :products orders))
+         [:div {:class :summary}
+          [:hr {:class :day-seperator}]
+          [:div {:class :header} "w sumie:"]
+          (->> orders
+               (map :products)
+               (apply merge-with (partial merge-with +))
+               (sort-by first)
+               (map (partial prod/format-product settings))
+               (into [:div {:class :products-sum}]))])]]]))
 
 (defn calendar [days settings]
   (->> days

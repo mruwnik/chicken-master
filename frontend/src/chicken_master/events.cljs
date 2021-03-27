@@ -178,6 +178,13 @@
                               :body group
                               :on-success ::process-stock)}))
 
+(re-frame/reg-event-fx
+ ::save-customer-prices
+ (fn [_ [_ id products]]
+   {:dispatch [::start-loading]
+    :http-xhrio (http-request :post (str "customers/" id "/prices")
+                              :body products
+                              :on-success ::process-stock)}))
 
 ;;; Storage events
 

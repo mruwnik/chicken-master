@@ -135,7 +135,10 @@
                          :overflow :hidden
                          :margin-right "10px"}]
         [:.product-amount {:width "40px"
-                           :max-height "5px"}]
+                           :max-height "5px"
+                           :display :inline-block}]
+        [:.product-price {:width "40px"
+                          :max-height "5px"}]
 
         ]]
       [:.summary {:margin-top "10px"}]]]

@@ -8,6 +8,12 @@
 
 (re-frame/reg-sub ::available-products (fn [db] (:products db)))
 (re-frame/reg-sub ::available-customers (fn [db] (:customers db)))
+(re-frame/reg-sub
+ ::customer-prices
+ (fn [db]
+   (->> db :customers
+        (reduce (fn [col {:keys [id prices]}]
+                  (assoc col id (reduce-kv #(assoc %1 %2 (:price %3)) {} prices))) {}))))
 (re-frame/reg-sub ::orders (fn [db] (:orders db)))
 
 (defn- show-modal? [modal db] (and (-> modal db :show) (-> db :loading? zero?)))

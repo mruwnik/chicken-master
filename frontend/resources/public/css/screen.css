@@ -247,6 +247,12 @@ html body .calendar .day .product .product-name {
 html body .calendar .day .product .product-amount {
   width: 40px;
   max-height: 5px;
+  margin-right: 10px;
+}
+
+html body .calendar .day .product .product-price {
+  width: 40px;
+  max-height: 5px;
 }
 
 html body .calendar .day .summary {

@@ -34,15 +34,19 @@
  ::initialize-db
  (fn [_ _]
    (time/update-settings config/default-settings)
-   (let [user (some-> js/window (.-localStorage) (.getItem :bearer-token))]
-     {:db (assoc db/default-db
-                 :settings config/default-settings
-                 :current-user user)
-      :dispatch [(when user ::load-db)]})))
+   (let [user (some-> js/window (.-localStorage) (.getItem :bearer-token))
+         user (when-not (= user "null") user)
+         result {:db (assoc db/default-db
+                            :settings config/default-settings
+                            :current-user user)}]
+     (if user
+       (assoc result :dispatch [::load-db])
+       result))))
 
 (re-frame/reg-event-fx
  ::load-db
  (fn [_ _]
+   (prn "loading")
    (time/update-settings config/default-settings)
    {:fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
          [:dispatch [::start-loading]]
@@ -68,8 +72,8 @@
 (re-frame/reg-event-fx
  ::failed-request
  (fn [{db :db} [_ response]]
-   {:db (update db :current-user #(when-not (= (:status response) 401) %))
-    :fx [[:dispatch [::log-error (str response)]]
+   {:fx [(when (= (:status response) 401) [:dispatch [::log-out]])
+         [:dispatch [::log-error (str response)]]
          [:dispatch [::stop-loading]]]}))
 
 (re-frame/reg-event-fx
@@ -234,6 +238,11 @@
    {:db (assoc db :current-user (b64/encodeString (str (user "name") ":" (user "password"))))
     :dispatch [::load-db]}))
 
+(re-frame/reg-event-db
+ ::log-out
+ (fn [db _]
+   (config/set-item! :bearer-token nil)
+   (dissoc db :current-user)))
 
 (comment
   (re-frame/dispatch-sync [::show-stock])

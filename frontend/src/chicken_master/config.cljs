@@ -70,13 +70,14 @@
      [:label {:for id} label])
    [:input (merge {:name id :id id} handlers (dissoc opts :parser))]
    (when (and label (#{:checkbox :radio} (:type opts)))
-     [:label {:for id} label])
-   ]))
+     [:label {:for id} label])]))
 
 (defn settings-options []
   [:div
+   [:h3 "Ustawienia używtkownika"]
+   [:button {:type :button :on-click #(re-frame/dispatch [:chicken-master.events/log-out])} "wyloguj"]
+
    [:h3 "Ustawienia wyglądu kalendarza"]
-   [:button {:type :button :on-click #(set-item! :bearer-token nil)} "wyloguj"]
 
    (input :first-day-offset "o ile dni przesunąć niedziele w lewo"
           {:type :number :max 7 :min 0 :parser #(js/parseInt %)})

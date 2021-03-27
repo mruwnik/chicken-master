@@ -73,6 +73,21 @@
                       "ON CONFLICT (name, user_id) DO UPDATE SET "
                       "deleted = NULL, amount = EXCLUDED.amount") "milk" :user-id 3]])))))
 
+  (testing "empty fields aren't ignored"
+    (let [inserts (atom [])]
+      (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
+                    jdbc/execute! #(swap! inserts conj %2)
+                    sql/update! (constantly nil)
+                    sql/query (constantly [])]
+        (sut/update! :user-id {:eggs {:amount 2} :milk {:amount 3 :price nil} :cows {}})
+        (is (= (sort-by second @inserts)
+               [[(str "INSERT INTO products (name, user_id, amount) VALUES(?, ?, ?) "
+                      "ON CONFLICT (name, user_id) DO UPDATE "
+                      "SET deleted = NULL, amount = EXCLUDED.amount") "eggs" :user-id 2]
+                [(str "INSERT INTO products (name, user_id, amount, price) VALUES(?, ?, ?, ?) "
+                      "ON CONFLICT (name, user_id) DO UPDATE SET "
+                      "deleted = NULL, amount = EXCLUDED.amount, price = EXCLUDED.price") "milk" :user-id 3 nil]])))))
+
   (testing "non selected items get removed"
     (let [updates (atom [])]
       (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
@@ -82,7 +97,7 @@
         (sut/update! :user-id {:eggs {:amount 2} :milk {:amount 3} :cows {:amount 2}})
         (is (= @updates [{} :products {:deleted true} ["name NOT IN (?, ?, ?)" "eggs" "milk" "cows"]])))))
 
-  (testing "non selected items get removed"
+  (testing "products get returned"
     (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
                   jdbc/execute! (constantly nil)
                   sql/update! (constantly nil)
@@ -102,7 +117,7 @@
                                   (is (= id {:bla_id item-id})))]
         (sut/update-products-mapping! :tx 123 :bla item-id {:eggs 34 :milk 25 :carrots 13}))))
 
-  (testing "items get removed"
+  (testing "items get added"
     (let [item-id 123]
       (with-redefs [sut/products-map (constantly {"eggs" 1 "milk" 2 "carrots" 3})
                     sql/delete! (constantly :ok)

@@ -29,7 +29,7 @@
                                  #(swap! state assoc-in
                                          [product :price]
                                          (some-> % .-target .-value prod/num-or-nil prod/normalise-price)))])]))
-       [prod/item-adder :callback #(swap! state assoc (keyword %) 0) :button "+"]])))
+       [prod/item-adder :callback #(swap! state assoc (keyword %) {:amount 0}) :button "+"]])))
 
 (defn process-form [form]
   (->> form
@@ -47,4 +47,4 @@
     [:h2 "Magazyn"]
     [stock-form @(re-frame/subscribe [::subs/available-products])]]
    ;; On success
-   :on-submit (fn [form] (re-frame/dispatch [::event/save-stock (process-form form)]))))
+   :on-submit (fn [form] (prn form) (prn (process-form form)) (re-frame/dispatch [::event/save-stock (process-form form)]))))

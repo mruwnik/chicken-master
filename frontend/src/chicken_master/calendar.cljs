@@ -34,6 +34,11 @@
                               (prod/calc-price (:id who) prod price amount))) products)
        (assoc order :products)))
 
+(defn merge-product-values [& products]
+  (apply merge-with
+         (fn [& values] (some->> values (remove nil?) seq (reduce +)))
+         products))
+
 (defn order-form
   ([order] (order-form order #{:who :day :notes :products :group-products}))
   ([order fields]
@@ -126,7 +131,7 @@
           [:div {:class :header} "w sumie:"]
           (->> orders
                (map :products)
-               (apply merge-with (partial merge-with +))
+               (apply merge-with merge-product-values)
                (sort-by first)
                (map (partial prod/format-product settings))
                (into [:div {:class :products-sum}]))])]]]))

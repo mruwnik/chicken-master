@@ -52,6 +52,35 @@
                                     :milk {:amount 3 :price 5 :final-price 15}
                                     :carrots {:amount 6 :final-price nil}})))))))
 
+(deftest merge-product-values-test
+  (testing "single item"
+    (is (= (sut/merge-product-values {:amount 23, :price 32, :final-price 1})
+           {:amount 23, :price 32, :final-price 1})))
+
+  (testing "items with price"
+    (is (= (sut/merge-product-values {:amount 23, :price 2, :final-price 3}
+                                     {:amount 45, :price 1, :final-price 4})
+           {:amount 68, :price 3, :final-price 7})))
+
+  (testing "items without prices"
+    (is (= (sut/merge-product-values {:amount 23, :price nil, :final-price nil}
+                                     {:amount 45, :price nil, :final-price nil})
+           {:amount 68, :price nil, :final-price nil})))
+
+  (testing "items with mixed prices"
+    (is (= (sut/merge-product-values {:amount 23, :price 2, :final-price 3}
+                                     {:amount 45, :price nil, :final-price nil})
+           {:amount 68, :price 2, :final-price 3})))
+
+  (testing "multiple items"
+    (is (= (sut/merge-product-values {:amount 6, :price 7, :final-price 3}
+                                     {:amount 5, :price 2, :final-price 4}
+                                     {:amount 4, :price nil, :final-price 5}
+                                     {:amount 3, :price 4, :final-price nil}
+                                     {:amount 2, :price 5, :final-price 7}
+                                     {:amount 1})
+           {:amount 21, :price 18, :final-price 19}))))
+
 (deftest format-raw-order-test
   (testing "no products"
     (is (= (sut/format-raw-order {}) {:who {:name nil :id nil} :day nil :notes nil :products {}}))

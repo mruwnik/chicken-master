@@ -11,8 +11,9 @@
     (when-not (js/isNaN i) i)))
 
 (defn round [num digits]
-  (let [div (js/Math.pow 10 digits)]
-    (/ (js/Math.round (* num div)) div)))
+  (when num
+    (let [div (js/Math.pow 10 digits)]
+      (/ (js/Math.round (* num div)) div))))
 
 (defn format-price [price] (when price (round (/ price 100) 2)))
 (defn normalise-price [price] (when price (round (* price 100) 0)))
@@ -100,7 +101,7 @@
      [:span {:class :product-amount} amount])
    (when (settings :prices)
      [:span {:class :product-price}
-      (format-price final-price)])])
+      (or (format-price final-price) (settings :empty-price-marker))])])
 
 (defn item-adder [& {:keys [type value callback button class]
                      :or {type :text value "" button nil}}]

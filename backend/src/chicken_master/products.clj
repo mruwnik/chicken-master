@@ -18,7 +18,7 @@
          (into {}))))
 
 (defn- update-product [tx user-id prod values]
-  (let [to-update (seq (filter values [:amount :price]))
+  (let [to-update (seq (filter (partial contains? values) [:amount :price]))
         cols (->> to-update (map name) (str/join ", "))
         params (concat [(name prod) user-id] (map values to-update))
         updates (->> to-update

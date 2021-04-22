@@ -6,6 +6,11 @@ Handle the day-to-day business of a small farm. Schedule purchases, track costs,
 
 See the READMEs in the `backend` and `frontend` folders.
 
+## Live test
+
+https://chickens.ahiru.pl/
+user: bla
+pass: bla
 
 ## TODO
 * daily view

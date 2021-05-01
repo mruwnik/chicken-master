@@ -84,7 +84,6 @@
    (input :day-names "Nazwy dni tygodnia"
           {:default (clojure.string/join ", " (settings :day-names))
            :parser #(clojure.string/split % #"\s*,\s*")})
-   (input :calendar-heading "Pokaż nagłówek z dniami tygodnia" {:type :checkbox})
 
    [:h3 "Ustawienia wyglądu poszczególnych dni"]
     (input :date-format "Format daty. %D wstawia nazwę dnia, %d dzień a %m miesiąc" {})

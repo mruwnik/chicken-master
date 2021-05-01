@@ -2,6 +2,7 @@
   (:require
    [re-frame.core :as re-frame]
    [reagent.core :as reagent]
+   [clojure.string :as str]
    [chicken-master.products :as prod]
    [chicken-master.subs :as subs]
    [chicken-master.html :as html]
@@ -69,7 +70,7 @@
                              vals
                              (group-by #(get-in % [:who :id])))]
       (doall
-       (for [{:keys [name id] :as who} @(re-frame/subscribe [::subs/available-customers])]
+       (for [{:keys [name id] :as who} (sort-by #(some-> % :name str/lower-case) @(re-frame/subscribe [::subs/available-customers]))]
          [:details {:class :client :key (gensym)}
           [:summary [:span name [:button {:on-click #(re-frame/dispatch
                                                       [::event/confirm-action

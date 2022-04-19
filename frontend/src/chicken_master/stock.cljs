@@ -47,4 +47,4 @@
     [:h2 "Magazyn"]
     [stock-form @(re-frame/subscribe [::subs/available-products])]]
    ;; On success
-   :on-submit (fn [form] (prn form) (prn (process-form form)) (re-frame/dispatch [::event/save-stock (process-form form)]))))
+   :on-submit (fn [form] (re-frame/dispatch [::event/save-stock (process-form form)]))))

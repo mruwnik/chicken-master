@@ -1,0 +1,14 @@
+{:up ["ALTER TABLE orders ADD recurrence VARCHAR(512)"
+      "ALTER TABLE orders ADD end_date TIMESTAMPTZ"
+      "CREATE TABLE recurrence_exceptions(
+           order_id INT,
+           order_date TIMESTAMPTZ NOT NULL,
+           status order_state DEFAULT 'waiting',
+           PRIMARY KEY(order_id, order_date),
+           CONSTRAINT fk_customer FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE)"
+      "UPDATE orders SET end_date = o.order_date
+         FROM orders AS o
+         WHERE orders.id = o.id"]
+ :down ["DROP TABLE recurrence_exceptions"
+        "ALTER TABLE orders DROP COLUMN end_date"
+        "ALTER TABLE orders DROP COLUMN recurrence"]}

@@ -89,8 +89,8 @@
          :on-drag-start #(-> % .-dataTransfer (.setData "text" id))}
    [:div {:class :actions}
     (condp = state
-      :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id])} "✓"]
-      :fulfilled [:button {:on-click #(re-frame/dispatch [::event/reset-order id])} "X"]
+      :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id day])} "✓"]
+      :fulfilled [:button {:on-click #(re-frame/dispatch [::event/reset-order id day])} "X"]
       :pending nil
       nil nil)
     [:button {:on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
@@ -120,6 +120,7 @@
        (->> (if (settings :hide-fulfilled-orders)
               (remove (comp #{:fulfilled} :state) orders)
               orders)
+            (remove (comp #{:canceled} :state))
             (map (partial format-order settings))
             doall)
        (when (settings :show-day-add-order)

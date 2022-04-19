@@ -43,8 +43,8 @@
         order (-> request :body (update :id #(or % id)))]
     (as-edn (orders/replace! user-id order))))
 
-(defn delete-order [user-id id] (->> id edn/read-string (orders/delete! user-id) as-edn))
-(defn set-order-state [user-id id status] (as-edn (orders/change-state! user-id (edn/read-string id) status)))
+(defn delete-order [user-id id day] (->> id edn/read-string (orders/delete! user-id day) as-edn))
+(defn set-order-state [user-id id day status] (as-edn (orders/change-state! user-id (edn/read-string id) day status)))
 
 (defn get-stock [user-id] (get-values user-id [:customers :products]))
 
@@ -64,5 +64,5 @@
   (GET "/orders" [:as {user-id :basic-authentication}] (get-orders user-id))
   (POST "/orders" request (update-order request))
   (PUT "/orders/:id" request (update-order request))
-  (DELETE "/orders/:id" [id :as {user-id :basic-authentication}] (delete-order user-id id))
-  (POST "/orders/:id/:status" [id status :as {user-id :basic-authentication}] (set-order-state user-id id status)))
+  (DELETE "/orders/:id" [id :as {user-id :basic-authentication body :body}] (delete-order user-id id (:day body)))
+  (POST "/orders/:id/:status" [id status :as {user-id :basic-authentication body :body}] (set-order-state user-id id (:day body) status)))

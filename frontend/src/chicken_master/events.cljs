@@ -46,7 +46,6 @@
 (re-frame/reg-event-fx
  ::load-db
  (fn [_ _]
-   (prn "loading")
    (time/update-settings config/default-settings)
    {:fx [[:dispatch [::show-from-date (time/iso-date (time/today))]]
          [:dispatch [::start-loading]]
@@ -98,15 +97,17 @@
 
 (re-frame/reg-event-fx
  ::fulfill-order
- (fn [{db :db} [_ id]]
+ (fn [{db :db} [_ id day]]
    {:db (assoc-in db [:orders id :state] :pending)
-    :http-xhrio (http-request :post (str "orders/" id "/fulfilled"))}))
+    :http-xhrio (http-request :post (str "orders/" id "/fulfilled")
+                              :body {:day day})}))
 
 (re-frame/reg-event-fx
  ::reset-order
- (fn [{db :db} [_ id]]
+ (fn [{db :db} [_ id day]]
    {:db (assoc-in db [:orders id :state] :waiting)
-    :http-xhrio (http-request :post (str "orders/" id "/waiting"))}))
+    :http-xhrio (http-request :post (str "orders/" id "/waiting")
+                              :body {:day day})}))
 
 (re-frame/reg-event-fx
  ::save-order

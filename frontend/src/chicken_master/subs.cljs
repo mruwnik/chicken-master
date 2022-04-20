@@ -21,7 +21,9 @@
 (re-frame/reg-sub ::show-stock-modal (partial show-modal? :stock))
 (re-frame/reg-sub ::show-settings-modal (partial show-modal? :settings))
 (re-frame/reg-sub ::show-customers-modal (fn [db] (-> db :clients :show)))
+(re-frame/reg-sub ::show-order-type-modal (partial show-modal? :order-type-edit))
 
 (re-frame/reg-sub ::editted-order (fn [db] (:order-edit db)))
+(re-frame/reg-sub ::order-type-edit (fn [db] (:order-type-edit db)))
 
 (re-frame/reg-sub ::current-days (fn [db] (:current-days db)))

@@ -230,9 +230,9 @@
                     sql/query (constantly (raw-order-row :id 4 :recurrence "FREQ=DAILY;COUNT=1"))
                     sql/update! (fn [_ table status key] (swap! invocations conj ["updating" table status key]))
                     sql/insert! (fn [_ table values] (swap! invocations conj ["inserting" table values]))]
-        (testing "deleting with :all remove the whole order"
+        (testing "deleting with \"all\" removes the whole order"
           (reset! invocations [])
-          (is (= (sut/delete! :user-id nil :all 1)
+          (is (= (sut/delete! :user-id nil "all" 1)
                  {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
                                  :who {:id 2, :name "mr blobby"}, :recurrence {:times 1, :until nil, :unit "day", :every 1}
                                  :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))

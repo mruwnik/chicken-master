@@ -36,7 +36,8 @@
      @(re-frame/subscribe [::subs/show-stock-modal]) (stock/show-available)
      @(re-frame/subscribe [::subs/show-settings-modal]) (show-settings)
      @(re-frame/subscribe [::subs/show-customers-modal]) (cust/show-customers)
-     @(re-frame/subscribe [::subs/show-edit-modal]) (cal/edit-order))
+     @(re-frame/subscribe [::subs/show-edit-modal]) (cal/edit-order)
+     @(re-frame/subscribe [::subs/show-order-type-modal]) (cal/choose-order-type))
 
    [:button {:id :show-stock-button :class :menu-button :on-click #(re-frame/dispatch [::event/show-stock])} "Magazyn"]
    [:button {:id :show-clients-button :class :menu-button :on-click #(re-frame/dispatch [::event/show-customers])} "Klienci"]

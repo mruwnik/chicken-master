@@ -76,6 +76,15 @@
          [:dispatch [::stop-loading]]]}))
 
 (re-frame/reg-event-fx
+ ::change-order-type
+ (fn [{db :db} [_ id event]]
+   (prn "changing" (-> db :orders (get id)))
+   (prn event)
+   (if (-> db :orders (get id) :recurrence)
+     {:db (assoc db :order-type-edit {:show true :order (-> db :orders (get id)) :event event})}
+     {:db db :dispatch event})))
+
+(re-frame/reg-event-fx
  ::remove-order
  (fn [_ [_ id day action-type]]
    (if (or day action-type)

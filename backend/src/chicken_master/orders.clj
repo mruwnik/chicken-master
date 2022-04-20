@@ -97,17 +97,6 @@
       :else ; single item modified
       (update-single-item tx user-id order-date order updates))))
 
-;; (db/get-by-id db/db-uri 2 :orders 267)
-;; (upsert-order! db/db-uri 2 15 {:notes "no recur1" :day "2022-04-20"})
-;; (upsert-order! db/db-uri 2 15 {:notes "recur2" :day "2022-04-18" :recurrence "FREQ=DAILY;COUNT=10"})
-;; (upsert-order! db/db-uri 2 15 {:update-type :all :id 279 :notes "recur2" :day "2022-04-18" :recurrence "FREQ=DAILY;COUNT=10"})
-;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main-default" :day "2022-04-18" :order-date "2022-04-18"})
-;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main" :day "2022-04-18"})
-;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main-all" :update-type :all :day "2022-04-18" :order-date "2022-04-18"})
-;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main-from" :update-type :from-here :day "2022-04-18" :order-date "2022-04-22"})
-;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "12323" :update-type :single :day "2022-04-18" :order-date "2022-04-18"})
-;; (upsert-order! db/db-uri 2 15 {:id 260 :notes "1dsf2a" :update-type :single :day "2022-04-19"})
-
 (defn structure-order [items]
   {:id         (-> items first :orders/id)
    :notes      (-> items first :orders/notes)
@@ -184,14 +173,15 @@
          (group-by :day)
          (merge (reduce #(assoc %1 (t/format-date %2) {}) {} days)))))
 
-(defn replace! [user-id {:keys [who products day order-date] :as order}]
-  (jdbc/with-transaction [tx db/db-uri]
-    (let [customer-id (or (:id who)
-                          (customers/get-or-create-by-name tx user-id (:name who)))]
-      (products/update-products-mapping! tx user-id :order
-                                         (upsert-order! tx user-id customer-id order)
-                                         products)
-      (orders-for-days tx user-id day order-date))))
+(defn replace!
+  ([user-id order] (jdbc/with-transaction [tx db/db-uri] (replace! tx user-id order)))
+  ([tx user-id {:keys [who products day order-date] :as order}]
+   (let [customer-id (or (:id who)
+                         (customers/get-or-create-by-name tx user-id (:name who)))]
+     (products/update-products-mapping! tx user-id :order
+                                        (upsert-order! tx user-id customer-id order)
+                                        products)
+     (orders-for-days tx user-id day order-date))))
 
 (defn change-state!
   "Update the state of the given order and also modify the number of products available:
@@ -225,22 +215,12 @@
     (cond
       ;; Delete the order along with all recurrences
       (or (->> id (db/get-by-id tx user-id :orders) :orders/recurrence nil?)
-          (= :all action-type))
+          (= "all" action-type))
       (full-delete tx user-id id)
+
+      (= "from-here" action-type) nil
+      ;; TODO: handle partial deletions
 
       ;; Only delete the one day
       :else
       (change-state! tx user-id id day "canceled"))))
-
-;; (delete! 2 "2022-04-20" 240)
-;; (delete! 2 nil 241)
-
-;; (change-state! 2 240 "2022-04-20" "waiting")
-;; (change-state! 2 250 "2022-04-23" "fulfilled")
-;; (get-orders db/db-uri (t/to-inst #inst "2022-04-20T00:00:00Z") (t/to-inst #inst "2022-04-20T00:00:00Z") nil nil)
-;; (get-orders db/db-uri (t/to-inst #inst "2022-04-23T00:00:00Z") (t/to-inst #inst "2022-04-24T00:00:00Z") nil nil)
-;; (get-order db/db-uri 2 242 (t/to-inst #inst "2022-04-20T00:00:00Z"))
-;; (orders-for-days db/db-uri 2 #inst "2022-04-23T00:00:00Z" #inst "2022-04-23T00:00:00Z")
-;; (orders-for-days db/db-uri 2 #inst "2022-04-23T00:00:00Z")
-;; (orders-for-days db/db-uri 2 "2022-04-19")
-;; (get-all 2)

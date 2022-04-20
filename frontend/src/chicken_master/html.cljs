@@ -5,9 +5,10 @@
 (defn extract-input [elem]
   (condp = (.-tagName elem)
     "CHECKBOX" [(.-name elem) (.-checked elem)]
-    "INPUT" [(.-name elem) (if (some-> (.-type elem) clojure.string/lower-case #{"checkbox"})
-                             (.-checked elem)
-                             (.-value elem))]
+    "INPUT" (condp = (some-> (.-type elem) clojure.string/lower-case)
+              "checkbox" [(.-name elem) (.-checked elem)]
+              "radio" (when (.-checked elem) [(.-name elem) (.-id elem)])
+              [(.-name elem) (.-value elem)])
     "SELECT" [(.-name elem) (some->> elem
                                      (filter #(.-selected %))
                                      first
@@ -25,12 +26,13 @@
   ([id label] (input id label {}))
   ([id label options]
      [:div {:class :input-item}
-      (if label [:label {:for id} label])
-      [:input (-> options
-                  (assoc :defaultValue (:default options))
-                  (dissoc :default)
-                  (merge {:name id :id id}))]]))
-
+      (when label [:label {:for id} label])
+      [:input (merge {:name id :id id}
+                     (if-not (:default options)
+                       options
+                       (-> options
+                           (assoc :defaultValue (:default options))
+                           (dissoc :default))))]]))
 
 (defn modal
   ([modal-id content]

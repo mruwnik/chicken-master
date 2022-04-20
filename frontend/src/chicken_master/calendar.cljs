@@ -107,6 +107,17 @@
    ;; On success
    :on-submit (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
 
+(defn choose-order-type []
+  (let [{:keys [event]} @(re-frame/subscribe [::subs/order-type-edit])]
+    (html/modal
+     :order-type-edit
+     [:div
+      (html/input :single "tylko to" {:type :radio :name :type-choose :defaultChecked true})
+      ;; (html/input :from-here "od tego" {:type :radio :name :type-choose})
+      (html/input :all "wszystkie" {:type :radio :name :type-choose})]
+     ;; On success
+     :on-submit (fn [form] (re-frame/dispatch (conj event (form "type-choose" "single"))) :close-modal))))
+
 (defn format-order [settings {:keys [id who day hour notes state products]}]
   [:div {:class [:order state] :key (gensym)
          :draggable true
@@ -123,7 +134,7 @@
     [:button {:on-click #(re-frame/dispatch
                           [::event/confirm-action
                            "na pewno usunąć?"
-                           ::event/remove-order id day])} "-"]]
+                           ::event/change-order-type id [::event/remove-order id day]])} "-"]]
    [:div {:class :who} (:name who)]
    (if (settings :show-order-time)
      [:div {:class :when} hour])

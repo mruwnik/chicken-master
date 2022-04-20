@@ -1,4 +1,5 @@
 (ns chicken-master.time
+  (:require [clojure.set :as set])
   (:import [java.time Instant LocalDate ZoneOffset]
            [java.time.format DateTimeFormatter]
            [java.sql Timestamp]
@@ -95,7 +96,7 @@
   (-> rule
       (RecurrenceRule.)
       (.getFreq)
-      ((clojure.set/map-invert freq-units))))
+      ((set/map-invert freq-units))))
 
 (defn get-interval [rule] (.getInterval (RecurrenceRule. rule)))
 (defn set-interval [rule interval]

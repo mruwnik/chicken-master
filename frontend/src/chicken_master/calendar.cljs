@@ -105,7 +105,11 @@
    :order-edit
    [order-form @(re-frame/subscribe [::subs/editted-order])]
    ;; On success
-   :on-submit (fn [form] (re-frame/dispatch [::event/save-order (format-raw-order form)]))))
+   :on-submit (fn [form]
+                (let [order @(re-frame/subscribe [::subs/editted-order])
+                      event [::event/save-order (format-raw-order form)]]
+                  (re-frame/dispatch [::event/change-order-type (:id order) event])
+                  :close-modal))))
 
 (defn choose-order-type []
   (let [{:keys [event]} @(re-frame/subscribe [::subs/order-type-edit])]

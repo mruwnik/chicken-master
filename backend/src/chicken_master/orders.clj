@@ -75,7 +75,7 @@
       :else nil ;; FIXME: What should happen if an invalid date is provided?
       )))
 
-(defn upsert-order! [tx user-id customer-id {:keys [id day notes update-type order-date recurrence]}]
+(defn upsert-order! [tx user-id customer-id {:keys [id day notes action-type order-date recurrence] :as bla}]
   (let [updates (assoc? {:customer_id customer-id}
                         :recurrence (some-> recurrence t/make-rule)
                         :notes notes
@@ -88,10 +88,10 @@
       (-> order :orders/recurrence nil?)
       (update-non-recurring tx order updates)
 
-      (= :all update-type)
+      (= "all" action-type)
       (do (sql/update! tx :orders (set-dates order updates) {:id id}) id)
 
-      (= :from-here update-type)
+      (= "from-here" action-type)
       (update-from-date tx user-id order-date order updates)
 
       :else ; single item modified

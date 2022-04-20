@@ -78,8 +78,6 @@
 (re-frame/reg-event-fx
  ::change-order-type
  (fn [{db :db} [_ id event]]
-   (prn "changing" (-> db :orders (get id)))
-   (prn event)
    (if (-> db :orders (get id) :recurrence)
      {:db (assoc db :order-type-edit {:show true :order (-> db :orders (get id)) :event event})}
      {:db db :dispatch event})))
@@ -123,10 +121,11 @@
 
 (re-frame/reg-event-fx
  ::save-order
- (fn [{{order :order-edit} :db} [_ form]]
+ (fn [{{order :order-edit} :db} [_ form action-type]]
    {:dispatch [::hide-modal :order-edit]
     :http-xhrio (http-post "orders"
                            (merge
+                            {:action-type action-type}
                             (select-keys order [:id :day :hour :state :order-date])
                             (select-keys form [:id :day :hour :state :who :notes :products :recurrence])))}))
 

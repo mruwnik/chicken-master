@@ -77,15 +77,18 @@
 
 (re-frame/reg-event-fx
  ::remove-order
- (fn [_ [_ id]]
-   {:http-xhrio (http-request :delete (str "orders/" id))}))
+ (fn [_ [_ id day action-type]]
+   (if (or day action-type)
+     {:http-xhrio (http-request :post (str "orders/" id "/remove")
+                                :body {:day day :action-type action-type})}
+     {:http-xhrio (http-request :delete (str "orders/" id))})))
 
 (re-frame/reg-event-fx
  ::move-order
- (fn [{{orders :orders} :db} [_ id day]]
+ (fn [{{orders :orders} :db} [_ id from to]]
    {:http-xhrio
     (http-request :put (str "orders/" id)
-                  :body (-> id orders (assoc :day day)))}))
+                  :body (-> id orders (assoc :order-date from :day to)))}))
 
 (re-frame/reg-event-db
  ::edit-order
@@ -93,7 +96,7 @@
    (assoc db :order-edit
           (-> orders
               (get id {:state :waiting})
-              (merge {:show true :day day})))))
+              (merge {:show true :day day :order-date day})))))
 
 (re-frame/reg-event-fx
  ::fulfill-order
@@ -115,7 +118,7 @@
    {:dispatch [::hide-modal :order-edit]
     :http-xhrio (http-post "orders"
                            (merge
-                            (select-keys order [:id :day :hour :state])
+                            (select-keys order [:id :day :hour :state :order-date])
                             (select-keys form [:id :day :hour :state :who :notes :products])))}))
 
 (re-frame/reg-event-fx

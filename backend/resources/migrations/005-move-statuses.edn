@@ -1,6 +1,6 @@
 {:up ["INSERT INTO recurrence_exceptions (order_id, order_date, status)
        SELECT id AS order_id, order_date, status FROM orders
-       WHERE status != 'waiting'
+       WHERE status = 'fulfilled'
        ON conflict do nothing"
       "ALTER TABLE orders DROP COLUMN status"]
  :down ["ALTER TABLE orders ADD status order_state DEFAULT 'waiting'"

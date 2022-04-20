@@ -86,7 +86,9 @@
 (defn format-order [settings {:keys [id who day hour notes state products]}]
   [:div {:class [:order state] :key (gensym)
          :draggable true
-         :on-drag-start #(-> % .-dataTransfer (.setData "text" id))}
+         :on-drag-start (fn [e]
+                          (-> e .-dataTransfer (.setData "order-day" day))
+                          (-> e .-dataTransfer (.setData "order-id" id)))}
    [:div {:class :actions}
     (condp = state
       :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id day])} "✓"]
@@ -97,7 +99,7 @@
     [:button {:on-click #(re-frame/dispatch
                           [::event/confirm-action
                            "na pewno usunąć?"
-                           ::event/remove-order id])} "-"]]
+                           ::event/remove-order id day])} "-"]]
    [:div {:class :who} (:name who)]
    (if (settings :show-order-time)
      [:div {:class :when} hour])
@@ -111,9 +113,10 @@
   (let [orders (map calc-order-prices orders)]
     [:div {:class [:day (when (-> date time/parse-date time/today?) :today)]
            :on-drag-over #(.preventDefault %)
-           :on-drop #(let [id (-> % .-dataTransfer (.getData "text") prod/num-or-nil)]
+           :on-drop #(let [id  (-> % .-dataTransfer (.getData "order-id") prod/num-or-nil)
+                           from (-> % .-dataTransfer (.getData "order-day"))]
                        (.preventDefault %)
-                       (re-frame/dispatch [::event/move-order id date]))}
+                       (re-frame/dispatch [::event/move-order id from date]))}
      [:div {:class :day-header} (-> date time/parse-date time/format-date)]
      [:div
       [:div {:class :orders}

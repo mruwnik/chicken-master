@@ -5,12 +5,6 @@
            [org.dmfs.rfc5545.recur RecurrenceRule]
            [org.dmfs.rfc5545 DateTime]))
 
-(defn recurrence->dates [start rule]
-  (let [iterator (.iterator (RecurrenceRule. rule)
-                            (-> start (.toEpochMilli) (DateTime.)))]
-    (take-while identity
-            (repeatedly #(when (.hasNext iterator)
-                           (-> iterator (.nextDateTime) (.getTimestamp) (Instant/ofEpochMilli)))))))
 (defn parse-date [date]
   (if (= (count date) 10)
     (-> date (LocalDate/parse) (.atStartOfDay) (.toInstant ZoneOffset/UTC))
@@ -56,4 +50,18 @@
 
 (defn now [] (Instant/now))
 (def min-date (parse-date "2020-01-01"))
-(def max-date (.plusSeconds (now) (* 10 356 24 60 60))) ; 10 years from now - can't be bothered to do this properly...
+(def max-date (.plusSeconds (now) (* 40 356 24 60 60))) ; 40 years from now - can't be bothered to do this properly...
+
+(defn recurrence->dates [start rule]
+  (let [iterator (.iterator (RecurrenceRule. rule)
+                            (-> start (.toEpochMilli) (DateTime.)))]
+    (take-while identity
+                (repeatedly #(when (.hasNext iterator)
+                               (-> iterator (.nextDateTime) (.getTimestamp) (Instant/ofEpochMilli)))))))
+
+(defn last-date
+  "Get the end date for the given rule"
+  [start rule]
+  (->> (recurrence->dates (to-inst start) rule)
+       (take-while #(before % max-date))
+       last))

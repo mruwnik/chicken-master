@@ -75,6 +75,27 @@ html body .popup .popup-content {
   width: 15%;
 }
 
+html body .popup .popup-content .recurrence {
+  padding: 0.5em 0em 1em 1em;
+}
+
+html body .popup .popup-content .recurrence #recurrence-times {
+  width: 2em;
+}
+
+html body .popup .popup-content .recurrence .recurrence-freq .input-item {
+  display: inline-block;
+}
+
+html body .popup .popup-content .recurrence .recurrence-freq #recurrence-every {
+  width: 2em;
+}
+
+html body .popup .popup-content .recurrence .recurrence-freq label[for="recurrence-every"] {
+  min-width: 1em;
+  padding: 5px;
+}
+
 html body .popup .popup-content .input-item label {
   min-width: 60px;
   display: inline-block;

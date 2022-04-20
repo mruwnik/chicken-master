@@ -49,8 +49,13 @@
              :margin "15% auto"
              :padding "20px"
              :border "1px solid #888"
-             :width "15%"
-             }
+             :width "15%"}
+      [:.recurrence {:padding "0.5em 0em 1em 1em"}
+       [:#recurrence-times {:width "2em"}]
+       [:.recurrence-freq
+        [:.input-item {:display :inline-block}]
+        [:#recurrence-every {:width "2em"}]
+        ["label[for=\"recurrence-every\"]" {:min-width "1em" :padding "5px"}]]]
       [:.input-item
        [:label {:min-width "60px"
                 :display :inline-block}]]

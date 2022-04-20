@@ -119,7 +119,7 @@
     :http-xhrio (http-post "orders"
                            (merge
                             (select-keys order [:id :day :hour :state :order-date])
-                            (select-keys form [:id :day :hour :state :who :notes :products])))}))
+                            (select-keys form [:id :day :hour :state :who :notes :products :recurrence])))}))
 
 (re-frame/reg-event-fx
  ::process-fetched-days
@@ -128,7 +128,14 @@
             (update :current-days (fn [current-days]
                                     (for [[day orders] current-days]
                                       [day (if (contains? days day) (days day) orders)])))
-            (update :orders #(reduce (fn [m order] (assoc m (:id order) order)) % (mapcat second days))))
+            (update :orders (fn [orders] (->> days
+                                             (mapcat second)
+                                             (group-by :id)
+                                             vals
+                                             (map (fn [items] (->> items
+                                                                  (reduce #(assoc %1 (:day %2) (:state %2)) {})
+                                                                  (assoc (first items) :days))))
+                                             (reduce #(assoc %1 (:id %2) %2) orders)))))
     :dispatch [::stop-loading]}))
 
 (re-frame/reg-event-fx
@@ -146,7 +153,11 @@
  (fn [{{:keys [start-date orders] :as db} :db} [_ day]]
    (let [day (or day start-date)
          days (into #{} (time/get-weeks day 2))
-         filtered-orders (->> orders vals (filter (comp days :day)) (group-by :day))]
+         filtered-orders (->> orders vals
+                              (mapcat (fn [order]
+                                        (map #(assoc order :day (first %) :state (second %))
+                                             (:days order))))
+                              (filter (comp days :day)) (group-by :day))]
      {:db (assoc db
                  :start-date day
                  :current-days (map #(vector % (get filtered-orders %)) (sort days)))

@@ -37,11 +37,11 @@
            :end_date (t/to-db-date end-date))))
 
 (defn duplicate-order! [tx user-id order updates]
-    (->> updates
-         (merge {:user_id user-id})
-         (set-dates order)
-         (sql/insert! tx :orders)
-         :orders/id))
+  (->> updates
+       (merge {:user_id user-id})
+       (set-dates order)
+       (sql/insert! tx :orders)
+       :orders/id))
 
 (defn update-non-recurring [tx order updates]
   (let [order-id (:orders/id order)
@@ -55,12 +55,29 @@
       (upsert-exception! tx order-id order_date (:recurrence_exceptions/status exception)))
     order-id))
 
-(update-non-recurring db/db-uri (db/get-by-id db/db-uri 2 :orders 285) {:notes "asddqwqwd" :order_date "2020-04-19"})
-(recurrence-exception? db/db-uri 285 "2022-04-20")
+(defn update-single-item [tx user-id from-date {:orders/keys [id order_date] :as order} updates]
+  (upsert-exception! tx id (t/to-db-date (or from-date order_date)) "canceled")
+  (duplicate-order! tx user-id (dissoc order :orders/recurrence) (dissoc updates :recurrence)))
+
+(defn update-from-date [tx user-id from-date {:orders/keys [id order_date recurrence] :as order} updates]
+  (let [[recur-part-1 recur-part-2] (t/split-rule order_date recurrence from-date)]
+    (cond
+      ;; Split the order into 2, from the given date
+      recur-part-2
+      (do
+        (sql/update! tx :orders {:end_date (t/to-db-date from-date) :recurrence recur-part-1} {:id id})
+        (duplicate-order! tx user-id order (assoc updates :recurrence recur-part-2)))
+
+      ;; No need to split the event, as it's the first one
+      recur-part-1
+      (sql/update! tx :orders (set-dates order updates) {:id id})
+
+      :else nil ;; FIXME: What should happen if an invalid date is provided?
+      )))
 
 (defn upsert-order! [tx user-id customer-id {:keys [id day notes update-type order-date recurrence]}]
   (let [updates (assoc? {:customer_id customer-id}
-                        :recurrence recurrence
+                        :recurrence (some-> recurrence t/make-rule)
                         :notes notes
                         :order_date (some-> day t/to-db-date))
         order (db/get-by-id tx user-id :orders id)]
@@ -75,20 +92,26 @@
       (do (sql/update! tx :orders (set-dates order updates) {:id id}) id)
 
       (= :from-here update-type)
-      (do
-        ;; TODO: update magic recurrence rules to handle splitting stuff here
-        (sql/update! tx :orders {:end_date (t/to-db-date order-date)} {:id id})
-        (duplicate-order! tx user-id order updates))
+      (update-from-date tx user-id order-date order updates)
 
       :else ; single item modified
-      (do
-        (upsert-exception! tx id order-date "canceled")
-        (duplicate-order! tx user-id order updates)))))
+      (update-single-item tx user-id order-date order updates))))
+
+;; (db/get-by-id db/db-uri 2 :orders 267)
+;; (upsert-order! db/db-uri 2 15 {:notes "no recur1" :day "2022-04-20"})
+;; (upsert-order! db/db-uri 2 15 {:notes "recur2" :day "2022-04-18" :recurrence "FREQ=DAILY;COUNT=10"})
+;; (upsert-order! db/db-uri 2 15 {:update-type :all :id 279 :notes "recur2" :day "2022-04-18" :recurrence "FREQ=DAILY;COUNT=10"})
+;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main-default" :day "2022-04-18" :order-date "2022-04-18"})
+;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main" :day "2022-04-18"})
+;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main-all" :update-type :all :day "2022-04-18" :order-date "2022-04-18"})
+;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "main-from" :update-type :from-here :day "2022-04-18" :order-date "2022-04-22"})
+;; (upsert-order! db/db-uri 2 15 {:id 267 :notes "12323" :update-type :single :day "2022-04-18" :order-date "2022-04-18"})
+;; (upsert-order! db/db-uri 2 15 {:id 260 :notes "1dsf2a" :update-type :single :day "2022-04-19"})
 
 (defn structure-order [items]
   {:id         (-> items first :orders/id)
    :notes      (-> items first :orders/notes)
-   :recurrence (-> items first :orders/recurrence)
+   :recurrence (some-> items first :orders/recurrence t/parse-rule)
    :who        {:id   (-> items first :customers/id)
                 :name (-> items first :customers/name)}
    :products   (->> items
@@ -100,7 +123,8 @@
   "Get all days between `from` and `to` (inclusively) for which the order applies."
   [from to items]
   (let [{:orders/keys [recurrence order_date]} (first items)]
-    (->> (t/recurrence->dates (t/latest from order_date) (or recurrence "FREQ=MONTHLY;COUNT=1"))
+    (->> (t/recurrence->dates order_date (or recurrence "FREQ=MONTHLY;COUNT=1"))
+         (remove #(t/before % (t/to-inst from)))
          (take-while #(not (t/after % (t/to-inst to))))
          (map #(vector (t/format-date %) :waiting))
          (into {}))))
@@ -140,7 +164,8 @@
         vals
         (map (partial items->orders from to))
         (apply concat)
-        (filter #(t/between from (:day %) to)))))
+        (filter #(t/between from (:day %) to))
+        (remove (comp #{:canceled} :state)))))
 
 (defn get-order [tx user-id id & [day]]
   (first
@@ -197,7 +222,6 @@
 
 (defn delete! [user-id day action-type id]
   (jdbc/with-transaction [tx db/db-uri]
-    (prn (->> id (db/get-by-id tx user-id :orders)))
     (cond
       ;; Delete the order along with all recurrences
       (or (->> id (db/get-by-id tx user-id :orders) :orders/recurrence nil?)
@@ -207,3 +231,16 @@
       ;; Only delete the one day
       :else
       (change-state! tx user-id id day "canceled"))))
+
+;; (delete! 2 "2022-04-20" 240)
+;; (delete! 2 nil 241)
+
+;; (change-state! 2 240 "2022-04-20" "waiting")
+;; (change-state! 2 250 "2022-04-23" "fulfilled")
+;; (get-orders db/db-uri (t/to-inst #inst "2022-04-20T00:00:00Z") (t/to-inst #inst "2022-04-20T00:00:00Z") nil nil)
+;; (get-orders db/db-uri (t/to-inst #inst "2022-04-23T00:00:00Z") (t/to-inst #inst "2022-04-24T00:00:00Z") nil nil)
+;; (get-order db/db-uri 2 242 (t/to-inst #inst "2022-04-20T00:00:00Z"))
+;; (orders-for-days db/db-uri 2 #inst "2022-04-23T00:00:00Z" #inst "2022-04-23T00:00:00Z")
+;; (orders-for-days db/db-uri 2 #inst "2022-04-23T00:00:00Z")
+;; (orders-for-days db/db-uri 2 "2022-04-19")
+;; (get-all 2)

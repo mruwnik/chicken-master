@@ -9,6 +9,17 @@
    [chicken-master.events :as event]
    [chicken-master.time :as time]))
 
+(defn int-or-nil [val]
+  (let [i (js/parseInt val)]
+    (when-not (js/isNaN i) i)))
+
+(defn parse-recurrence [{:strs [recurrence-till recurrence-times recurrence-unit recurrence-every]}]
+  (when (or (int-or-nil recurrence-times) (seq recurrence-till))
+    {:times (int-or-nil recurrence-times)
+     :until (when (seq recurrence-till) recurrence-till)
+     :unit recurrence-unit
+     :every (or (int-or-nil recurrence-every) 1)}))
+
 (defn format-raw-order [{:strs [day who who-id notes] :as raw-values}]
   {:who {:name who
          :id (if (prod/num-or-nil who-id)
@@ -20,6 +31,7 @@
                     first :id))}
    :day day
    :notes notes
+   :recurrence (parse-recurrence raw-values)
    :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
 
 (defn get-group-products [customers who]
@@ -40,7 +52,7 @@
          products))
 
 (defn order-form
-  ([order] (order-form order #{:who :day :notes :products :group-products}))
+  ([order] (order-form order #{:who :day :notes :products :group-products :recurrence}))
   ([order fields]
    (let [customers @(re-frame/subscribe [::subs/available-customers])
          available-prods @(re-frame/subscribe [::subs/available-products])
@@ -71,6 +83,18 @@
         (when (:notes fields)
           (html/input :notes "notka"
                       {:default (:notes @state)}))
+        (when (:recurrence fields)
+          [:details {:class :recurrence-details}
+           [:summary "powtarzanie"]
+           [:div {:class :recurrence}
+            (html/input :recurrence-times "ile razy" {:type :number :default (-> order :recurrence :times)})
+            (html/input :recurrence-till "do kiedy" {:type :date :default (-> order :recurrence :until)})
+            [:div {:class :recurrence-freq}
+             (html/input :recurrence-every "co" {:type :number :default (-> order :recurrence :every)})
+             [:select {:name :recurrence-unit :id :recurrence-unit :defaultValue (-> order :recurrence :unit)}
+              [:option {:key :day :value "day"} "dni"]
+              [:option {:key :week :value "week"} "tygodni"]
+              [:option {:key :month :value "month"} "miesięcy"]]]]])
         (when (:products fields)
           [prod/products-edit (:products @state)
            :available-prods available-prods
@@ -123,7 +147,6 @@
        (->> (if (settings :hide-fulfilled-orders)
               (remove (comp #{:fulfilled} :state) orders)
               orders)
-            (remove (comp #{:canceled} :state))
             (map (partial format-order settings))
             doall)
        (when (settings :show-day-add-order)

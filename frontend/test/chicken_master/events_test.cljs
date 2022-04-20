@@ -20,12 +20,12 @@
   (rf/reg-event-fx event (fn [_ [_ & params]] (validator params) nil)))
 
 (def sample-orders
-  [{:id 1 :day "2020-01-02"} {:id 2 :day "2020-01-02"} {:id 3 :day "2020-01-02"}
-   {:id 4 :day "2020-01-04"}
-   {:id 5 :day "2020-01-06"} {:id 6 :day "2020-01-06"}])
+  [{:id 1 :day "2020-01-02" :state :waiting} {:id 2 :day "2020-01-02" :state :waiting} {:id 3 :day "2020-01-02" :state :waiting}
+   {:id 4 :day "2020-01-04" :state :waiting}
+   {:id 5 :day "2020-01-06" :state :waiting} {:id 6 :day "2020-01-06" :state :waiting}])
 
 (def sample-orders-by-day (group-by :day sample-orders))
-(def sample-orders-by-id (reduce #(assoc %1 (:id %2) %2) {} sample-orders))
+(def sample-orders-by-id (reduce #(assoc %1 (:id %2) (assoc %2 :days {(:day %2) (:state %2)})) {} sample-orders))
 
 (deftest hide-modal
   (testing "models can be hidden"
@@ -143,7 +143,7 @@
      (rf/dispatch [::sut/edit-order "2020-01-01" 1])
 
      (is (= @(rf/subscribe [::subs/editted-order])
-            {:show true :day "2020-01-01" :id 1}))))
+            {:show true :day "2020-01-01" :id 1 :order-date "2020-01-01"}))))
 
   (testing "new orders can be edited"
     (rf-test/run-test-sync
@@ -152,7 +152,7 @@
      (rf/dispatch [::sut/edit-order "2020-01-01" :new-order])
 
      (is (= @(rf/subscribe [::subs/editted-order])
-            {:show true :day "2020-01-01" :state :waiting}))))
+            {:show true :day "2020-01-01" :state :waiting :order-date "2020-01-01"}))))
 
   ;; FIXME: the request handler is not being overloaded
   (testing "orders are fulfilled"
@@ -273,11 +273,11 @@
 
      (is (= @(rf/subscribe [::subs/current-days])
             [["2020-01-01" [{:id :left-as-is :day "2020-01-01"}]]
-             ["2020-01-02" [{:id 1 :day "2020-01-02"} {:id 2 :day "2020-01-02"} {:id 3 :day "2020-01-02"}]]
+             ["2020-01-02" [{:id 1 :day "2020-01-02" :state :waiting} {:id 2 :day "2020-01-02" :state :waiting} {:id 3 :day "2020-01-02" :state :waiting}]]
              ["2020-01-03" nil]
-             ["2020-01-04" [{:id 4 :day "2020-01-04"}]]
+             ["2020-01-04" [{:id 4 :day "2020-01-04" :state :waiting}]]
              ["2020-01-05" nil]
-             ["2020-01-06" [{:id 5 :day "2020-01-06"} {:id 6 :day "2020-01-06"}]]
+             ["2020-01-06" [{:id 5 :day "2020-01-06" :state :waiting} {:id 6 :day "2020-01-06" :state :waiting}]]
              ["2020-01-07" nil]])))))
 
 (deftest test-show-from-date
@@ -297,11 +297,14 @@
             [["2019-12-30" nil]
              ["2019-12-31" nil]
              ["2020-01-01" nil]
-             ["2020-01-02" [{:id 1, :day "2020-01-02"} {:id 2, :day "2020-01-02"} {:id 3, :day "2020-01-02"}]]
+             ["2020-01-02" [{:id 1, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}
+                            {:id 2, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}
+                            {:id 3, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}]]
              ["2020-01-03" nil]
-             ["2020-01-04" [{:id 4, :day "2020-01-04"}]]
+             ["2020-01-04" [{:id 4, :day "2020-01-04" :state :waiting, :days {"2020-01-04" :waiting}}]]
              ["2020-01-05" nil]
-             ["2020-01-06" [{:id 5, :day "2020-01-06"} {:id 6, :day "2020-01-06"}]]
+             ["2020-01-06" [{:id 5, :day "2020-01-06" :state :waiting, :days {"2020-01-06" :waiting}}
+                            {:id 6, :day "2020-01-06" :state :waiting, :days {"2020-01-06" :waiting}}]]
              ["2020-01-07" nil] ["2020-01-08" nil] ["2020-01-09" nil]
              ["2020-01-10" nil] ["2020-01-11" nil] ["2020-01-12" nil]]))))
 
@@ -314,11 +317,14 @@
             [["2019-12-30" nil]
              ["2019-12-31" nil]
              ["2020-01-01" nil]
-             ["2020-01-02" [{:id 1, :day "2020-01-02"} {:id 2, :day "2020-01-02"} {:id 3, :day "2020-01-02"}]]
+             ["2020-01-02" [{:id 1, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}
+                            {:id 2, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}
+                            {:id 3, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}]]
              ["2020-01-03" nil]
-             ["2020-01-04" [{:id 4, :day "2020-01-04"}]]
+             ["2020-01-04" [{:id 4, :day "2020-01-04" :state :waiting, :days {"2020-01-04" :waiting}}]]
              ["2020-01-05" nil]
-             ["2020-01-06" [{:id 5, :day "2020-01-06"} {:id 6, :day "2020-01-06"}]]
+             ["2020-01-06" [{:id 5, :day "2020-01-06" :state :waiting, :days {"2020-01-06" :waiting}}
+                            {:id 6, :day "2020-01-06" :state :waiting, :days {"2020-01-06" :waiting}}]]
              ["2020-01-07" nil] ["2020-01-08" nil] ["2020-01-09" nil]
              ["2020-01-10" nil] ["2020-01-11" nil] ["2020-01-12" nil]]))))
 
@@ -331,11 +337,14 @@
             [["2019-12-30" nil]
              ["2019-12-31" nil]
              ["2020-01-01" nil]
-             ["2020-01-02" [{:id 1, :day "2020-01-02"} {:id 2, :day "2020-01-02"} {:id 3, :day "2020-01-02"}]]
+             ["2020-01-02" [{:id 1, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}
+                            {:id 2, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}
+                            {:id 3, :day "2020-01-02" :state :waiting, :days {"2020-01-02" :waiting}}]]
              ["2020-01-03" nil]
-             ["2020-01-04" [{:id 4, :day "2020-01-04"}]]
+             ["2020-01-04" [{:id 4, :day "2020-01-04" :state :waiting, :days {"2020-01-04" :waiting}}]]
              ["2020-01-05" nil]
-             ["2020-01-06" [{:id 5, :day "2020-01-06"} {:id 6, :day "2020-01-06"}]]
+             ["2020-01-06" [{:id 5, :day "2020-01-06" :state :waiting, :days {"2020-01-06" :waiting}}
+                            {:id 6, :day "2020-01-06" :state :waiting, :days {"2020-01-06" :waiting}}]]
              ["2020-01-07" nil] ["2020-01-08" nil] ["2020-01-09" nil]
              ["2020-01-10" nil] ["2020-01-11" nil] ["2020-01-12" nil]])))))
 

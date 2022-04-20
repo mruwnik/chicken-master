@@ -83,11 +83,11 @@
 
 (deftest format-raw-order-test
   (testing "no products"
-    (is (= (sut/format-raw-order {}) {:who {:name nil :id nil} :day nil :notes nil :products {}}))
+    (is (= (sut/format-raw-order {}) {:who {:name nil :id nil} :day nil :notes nil :products {} :recurrence nil}))
     (is (= (sut/format-raw-order {"who" "bla" "notes" "ble"})
-           {:who {:name "bla" :id nil} :day nil :notes "ble" :products {}}))
+           {:who {:name "bla" :id nil} :day nil :notes "ble" :products {} :recurrence nil}))
     (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble" "day" "2020-10-10"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :products {}})))
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :products {} :recurrence nil})))
 
   (testing "decent products"
     (is (= (sut/format-raw-order {"who" "bla" "who-id" "123" "notes" "ble"
@@ -95,7 +95,7 @@
                                   "product-eggs" "eggs" "amount-eggs" "12"
                                   "product-cows" "cows" "amount-cows" "22" "price-cows" "2.32"
                                   "product-milk" "milk" "amount-milk" "3.2"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :recurrence nil
             :products {:eggs {:amount 12} :cows {:amount 22 :price 232} :milk {:amount 3.2}}})))
 
   (testing "duplicate products"
@@ -105,7 +105,7 @@
                                   "product-cows1" "cows" "amount-cows1" "1"
                                   "product-cows2" "cows" "amount-cows2" "2"
                                   "product-milk" "milk" "amount-milk" "3.2"})
-           {:who {:name "bla" :id 123} :day nil :notes "ble"
+           {:who {:name "bla" :id 123} :day nil :notes "ble" :recurrence nil
             :products {:eggs {:amount 24} :cows {:amount 3} :milk {:amount 3.2}}})))
 
   (testing "unselected are ignored"
@@ -115,7 +115,7 @@
                                   "product-bad2" "" "amount-bad2" "1"
                                   "product-milk" "milk" "amount-milk" "3.2"
                                   "product-bad3" "" "amount-bad3" "2"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :recurrence nil
             :products {:eggs {:amount 12} :milk {:amount 3.2}}})))
 
   (testing "prices are handled"
@@ -124,7 +124,7 @@
                                   "product-eggs1" "eggs" "amount-eggs1" "0" "price-eggs1" "1.0"
                                   "product-cow" "cow" "amount-cow" "0"
                                   "product-milk" "milk" "amount-milk" "3.2"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :recurrence nil
             :products {:eggs {:amount 12 :price 431} :milk {:amount 3.2}}})))
 
   (testing "items with 0 are removed"
@@ -133,8 +133,30 @@
                                   "product-eggs1" "eggs" "amount-eggs1" "0"
                                   "product-cow" "cow" "amount-cow" "0"
                                   "product-milk" "milk" "amount-milk" "3.2"})
-           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble"
-            :products {:eggs {:amount 12} :milk {:amount 3.2}}}))))
+           {:who {:name "bla" :id 123} :day "2020-10-10" :notes "ble" :recurrence nil
+            :products {:eggs {:amount 12} :milk {:amount 3.2}}})))
+
+  (testing "recurrence object is not created when empty vals provided"
+    (is (= (sut/format-raw-order {"recurrence-till" ""
+                                  "recurrence-times" ""
+                                  "recurrence-unit" ""
+                                  "recurrence-every" ""})
+           {:who {:name nil :id nil} :day nil :notes nil :products {} :recurrence nil})))
+
+  (testing "recurrence object is created when times provided"
+    (is (= (sut/format-raw-order {"recurrence-till" ""
+                                  "recurrence-times" "6"
+                                  "recurrence-unit" "week"
+                                  "recurrence-every" "3"})
+           {:who {:name nil :id nil} :day nil :notes nil :products {} :recurrence {:times 6, :until nil, :unit "week", :every 3}})))
+
+  (testing "recurrence object is created when till provided"
+    (is (= (sut/format-raw-order {"recurrence-till" "2020-01-01"
+                                  "recurrence-times" ""
+                                  "recurrence-unit" "week"
+                                  "recurrence-every" "3"})
+           {:who {:name nil :id nil} :day nil :notes nil :products {}
+            :recurrence {:times nil, :until "2020-01-01", :unit "week", :every 3}}))))
 
 (def customers
   [{:id 1 :name "mr blobby" :product-groups {"group 1" {:products {:eggs 1 :carrots 2}}

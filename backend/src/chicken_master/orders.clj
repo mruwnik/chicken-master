@@ -173,9 +173,9 @@
          (group-by :day)
          (merge (reduce #(assoc %1 (t/format-date %2) {}) {} days)))))
 
-(defn get-fortnight [tx user-id from]
-  (->> (get-orders tx from (t/plus from 14 :days) "o.user_id = ?" [user-id])
-       (group-by :day)))
+(defn get-fortnight [tx user-id & days]
+  (let [fortnight-after-earliest (t/plus (apply t/earliest days) 14 :days)]
+    (apply orders-for-days tx user-id fortnight-after-earliest days)))
 
 (defn replace!
   ([user-id order] (jdbc/with-transaction [tx db/db-uri] (replace! tx user-id order)))
@@ -185,7 +185,7 @@
      (products/update-products-mapping! tx user-id :order
                                         (upsert-order! tx user-id customer-id order)
                                         products)
-     (get-fortnight tx user-id (t/earliest day order-date)))))
+     (get-fortnight tx user-id day order-date))))
 
 (defn change-state!
   "Update the state of the given order and also modify the number of products available:
@@ -214,6 +214,21 @@
     (sql/delete! tx :orders {:id id :user_id user-id})
     (get-fortnight tx user-id (t/earliest order_date end_date))))
 
+(defn- delete-from-date [tx user-id id from-date]
+  (when-let [{:orders/keys [order_date recurrence] :as order} (some->> id (db/get-by-id tx user-id :orders))]
+    (if (t/same-day order_date from-date)
+      ;; deleting from the first date just means removing them all
+      (full-delete tx user-id id)
+      ;; deleting from a given date should update the recurrence rule to end with the given date and
+      ;; update the `end_date` field
+      (do
+        (sql/update! tx :orders
+                     (set-dates order {:recurrence (t/recur-until order_date recurrence from-date)})
+                     {:id id})
+        (->> (t/plus from-date 14 :days)
+             (t/dates-between order_date recurrence from-date)
+             (apply orders-for-days tx user-id))))))
+
 (defn delete! [user-id day action-type id]
   (jdbc/with-transaction [tx db/db-uri]
     (cond
@@ -222,8 +237,8 @@
           (= "all" action-type))
       (full-delete tx user-id id)
 
-      (= "from-here" action-type) nil
-      ;; TODO: handle partial deletions
+      (= "from-here" action-type)
+      (delete-from-date tx user-id id day)
 
       ;; Only delete the one day
       :else

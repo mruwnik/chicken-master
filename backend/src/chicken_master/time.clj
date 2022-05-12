@@ -91,6 +91,13 @@
                 (repeatedly #(when (.hasNext iterator)
                                (-> iterator (.nextDateTime) (.getTimestamp) (Instant/ofEpochMilli)))))))
 
+(defn dates-between
+  "Get all dates between `from` and `to` (inclusive)"
+  [start rule from to]
+  (->> (recurrence->dates (to-inst start) rule)
+       (drop-while (partial after (to-inst from)))
+       (take-while #(not (after % (to-inst to))))))
+
 (defn next-date
   "Get the next date after `day`"
   [start rule day]
@@ -161,10 +168,17 @@
 
       :else nil)))
 
+(defn recur-until
+  "Update the rule to ensure it ends before `date`"
+  [start rule date]
+  (if (get-until rule)
+    (set-until rule date)
+    (set-count rule (recurrence-pos start rule date))))
+
 (defn make-rule [{:keys [times until unit every]}]
   (let [rule (-> nil
-                 (set-freq unit)
-                 (set-interval every))]
+                 (set-freq (or unit "day"))
+                 (set-interval (or every 1)))]
     (if times
       (set-count rule times)
       (set-until rule until))))

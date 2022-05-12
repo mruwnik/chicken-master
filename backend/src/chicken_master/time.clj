@@ -111,7 +111,7 @@
     (.toString rule)))
 
 (defn get-until [rule]
-  (some-> rule (RecurrenceRule.) (.getUntil) (.getTimestamp) (Instant/ofEpochMilli)))
+  (some-> rule (RecurrenceRule.) (.getUntil) (.getTimestamp) (Instant/ofEpochMilli) str))
 (defn set-until [rule until]
   (let [rule (RecurrenceRule. rule)]
     (.setUntil rule (to-recur-datetime until))

@@ -2,6 +2,7 @@
   (:require [clojure.set :as set])
   (:import [java.time Instant LocalDate ZoneOffset]
            [java.time.format DateTimeFormatter]
+           (java.time.temporal ChronoUnit)
            [java.sql Timestamp]
            [org.dmfs.rfc5545.recur RecurrenceRule Freq]
            [org.dmfs.rfc5545 DateTime]))
@@ -11,12 +12,31 @@
     (-> date (LocalDate/parse) (.atStartOfDay) (.toInstant ZoneOffset/UTC))
     (Instant/parse date)))
 
+(def chrono-units {:centuries ChronoUnit/CENTURIES
+                   :days      ChronoUnit/DAYS
+                   :decades   ChronoUnit/DECADES
+                   :eras      ChronoUnit/ERAS
+                   :forever   ChronoUnit/FOREVER
+                   :half-days ChronoUnit/HALF_DAYS
+                   :hours     ChronoUnit/HOURS
+                   :micros    ChronoUnit/MICROS
+                   :millennia ChronoUnit/MILLENNIA
+                   :millis    ChronoUnit/MILLIS
+                   :minutes   ChronoUnit/MINUTES
+                   :months    ChronoUnit/MONTHS
+                   :nanos     ChronoUnit/NANOS
+                   :seconds   ChronoUnit/SECONDS
+                   :weeks     ChronoUnit/WEEKS
+                   :years     ChronoUnit/YEARS})
+
 (defprotocol TimeHelpers
   (to-inst [d])
   (to-db-date [d])
   (format-date [date])
   (before [d1 d2])
-  (after [d1 d2]))
+  (after [d1 d2])
+  (minus [d amount unit])
+  (plus [d amount unit]))
 
 (extend-type Instant
   TimeHelpers
@@ -27,7 +47,9 @@
         (.withZone ZoneOffset/UTC)
         (.format date)))
   (before [d1 d2] (.isBefore d1 d2))
-  (after [d1 d2] (.isBefore d2 d1)))
+  (after [d1 d2] (.isBefore d2 d1))
+  (plus [d amount unit] (.plus d amount (chrono-units unit)))
+  (minus [d amount unit] (.minus d amount (chrono-units unit))))
 
 (extend-type java.util.Date
   TimeHelpers
@@ -35,7 +57,9 @@
   (to-db-date [d] (-> d to-inst to-db-date))
   (format-date [date] (format-date (to-inst date)))
   (before [d1 d2] (< (.compareTo d1 d2) 0))
-  (after [d1 d2] (> (.compareTo d1 d2) 0)))
+  (after [d1 d2] (> (.compareTo d1 d2) 0))
+  (plus [d amount unit] (plus (to-inst d) amount unit))
+  (minus [d amount unit] (minus (to-inst d) amount unit)))
 
 (extend-type java.lang.String
   TimeHelpers
@@ -43,10 +67,12 @@
   (to-db-date [d] (-> d to-inst to-db-date))
   (format-date [date] (format-date (to-inst date)))
   (before [d1 d2] (before (to-inst d1) (to-inst d2)))
-  (after [d1 d2] (after (to-inst d1) (to-inst d2))))
+  (after [d1 d2] (after (to-inst d1) (to-inst d2)))
+  (plus [d amount unit] (plus (to-inst d) amount unit))
+  (minus [d amount unit] (minus (to-inst d) amount unit)))
 
-(defn earliest [& ds] (->> ds (map to-inst) (sort before) first))
-(defn latest [& ds] (->> ds (map to-inst) (sort after) first))
+(defn earliest [& ds] (->> ds (remove nil?) (map to-inst) (sort before) first))
+(defn latest [& ds] (->> ds (remove nil?) (map to-inst) (sort after) first))
 (defn between [d1 d2 d3] (and (not (before d2 d1)) (not (after d2 d3))))
 (defn same-day [d1 d2]
   (when (and d1 d2)
@@ -86,6 +112,7 @@
        (keep-indexed (fn [i d] (when (same-day d day) i)))
        first))
 
+;; Recurrence handlers
 (def freq-units {"day" Freq/DAILY "week" Freq/WEEKLY "month" Freq/MONTHLY "year" Freq/YEARLY})
 (defn set-freq [rule freq]
   (.toString

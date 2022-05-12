@@ -165,10 +165,10 @@
                                 (is (= table :orders))
                                 (is (= by {:id 1 :user_id :user-id})))
                   sql/query (constantly (raw-order-row :id 4))]
-    (is (= (sut/delete! :user-id nil nil 1)
-           {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
+    (is (= {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
                            :who {:id 2, :name "mr blobby"}, :recurrence nil
-                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))))
+                           :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}
+           (sut/delete! :user-id nil nil 1)))))
 
   (testing "nothing returned if no date set for the given order"
     (with-redefs [jdbc/transact (fn [_ f & args] (apply f args))
@@ -191,19 +191,19 @@
                     sql/insert! (fn [_ table values] (swap! invocations conj ["inserting" table values]))]
         (testing "deleting without provided a date will remove the whole order"
           (reset! invocations [])
-          (is (= (sut/delete! :user-id nil nil 1)
-                 {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
+          (is (= {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
                                  :who {:id 2, :name "mr blobby"}, :recurrence nil
-                                 :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))
+                                 :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}
+                 (sut/delete! :user-id nil nil 1)))
           (is (= [["deleting" :orders {:id 1 :user_id :user-id}]]
                  @invocations)))
 
         (testing "a provided date is ignored and will full delete"
           (reset! invocations [])
-          (is (= (sut/delete! :user-id "2020-01-01" nil 1)
-                 {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
+          (is (= {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
                                  :who {:id 2, :name "mr blobby"}, :recurrence nil
-                                 :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))
+                                 :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}
+                 (sut/delete! :user-id "2020-01-01" nil 1)))
           (is (= [["deleting" :orders {:id 1 :user_id :user-id}]]
                  @invocations)))
 
@@ -213,10 +213,10 @@
                                               {:orders/order_date #inst "2020-01-01"}))]
 
             (reset! invocations [])
-          (is (= (sut/delete! :user-id "2020-01-01" :single 1)
-                 {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
+          (is (= {"2020-01-01" [{:id 4, :notes "note", :state :waiting, :day "2020-01-01",
                                  :who {:id 2, :name "mr blobby"}, :recurrence nil
-                                 :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}))
+                                 :products {:eggs {:amount 12 :price nil} :milk {:amount 3 :price 423}}}]}
+                 (sut/delete! :user-id "2020-01-01" :single 1)))
             (is (= [["deleting" :orders {:id 1 :user_id :user-id}]]
                    @invocations)))))))
 

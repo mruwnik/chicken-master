@@ -117,7 +117,7 @@
      :order-type-edit
      [:div
       (html/input :single "tylko to" {:type :radio :name :type-choose :defaultChecked true})
-      ;; (html/input :from-here "od tego" {:type :radio :name :type-choose})
+      (html/input :from-here "od tego" {:type :radio :name :type-choose})
       (html/input :all "wszystkie" {:type :radio :name :type-choose})]
      ;; On success
      :on-submit (fn [form] (re-frame/dispatch (conj event (form "type-choose" "single"))) :close-modal))))

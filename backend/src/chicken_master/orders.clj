@@ -173,6 +173,10 @@
          (group-by :day)
          (merge (reduce #(assoc %1 (t/format-date %2) {}) {} days)))))
 
+(defn get-fortnight [tx user-id from]
+  (->> (get-orders tx from (t/plus from 14 :days) "o.user_id = ?" [user-id])
+       (group-by :day)))
+
 (defn replace!
   ([user-id order] (jdbc/with-transaction [tx db/db-uri] (replace! tx user-id order)))
   ([tx user-id {:keys [who products day order-date] :as order}]
@@ -181,7 +185,7 @@
      (products/update-products-mapping! tx user-id :order
                                         (upsert-order! tx user-id customer-id order)
                                         products)
-     (orders-for-days tx user-id day order-date))))
+     (get-fortnight tx user-id (t/earliest day order-date)))))
 
 (defn change-state!
   "Update the state of the given order and also modify the number of products available:
@@ -208,7 +212,7 @@
 (defn- full-delete [tx user-id id]
   (when-let [{:orders/keys [order_date end_date]} (some->> id (db/get-by-id tx user-id :orders))]
     (sql/delete! tx :orders {:id id :user_id user-id})
-    (orders-for-days tx user-id order_date end_date)))
+    (get-fortnight tx user-id (t/earliest order_date end_date))))
 
 (defn delete! [user-id day action-type id]
   (jdbc/with-transaction [tx db/db-uri]

@@ -22,11 +22,12 @@
          :value (:day @state)
          :class :order-date-picker
          :callback (fn [day] (swap! state #(assoc % :day day :open true)))]]
-       (if (:day @state)
+       (when (:day @state)
          [:div
           (when (:product-groups who)
             [prod/group-products state])
           [prod/products-edit (:products @state)
+           :fields (if (config/settings :prices) #{:amount :price} #{:amount})
            :getter-fn #(re-frame/dispatch [::event/save-order (assoc @state :products %)])]])])))
 
 (defn product-group-adder [who [name {:keys [id products]}]]
@@ -40,10 +41,11 @@
            (if (:name @state) "e" "+")]]
 
          [:div {:class :customer-product-group-edit}
-          (html/input :customer-product-group-name "nazwa"
+          (html/input :customer-product-group-name nil
                       {:default (:name @state)
                        :on-blur #(swap! state assoc :name (-> % .-target .-value))})
           [prod/products-edit (reagent/atom (or (:products @state) {}))
+           :fields (if (config/settings :prices) #{:amount :price} #{:amount})
            :getter-fn #(do
                          (swap! state dissoc :edit)
                          (when (and (:name @state) (:products @state))
@@ -64,7 +66,7 @@
   (html/modal
    :clients
    [:div {:class :customers-modal}
-    [:h2 "Clienci"]
+    [:h2 "Klienci"]
     [prod/item-adder :callback #(re-frame/dispatch [::event/add-customer %]) :button "+"]
     (let [client-orders (->> @(re-frame/subscribe [::subs/orders])
                              vals

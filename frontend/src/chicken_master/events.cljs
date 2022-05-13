@@ -166,6 +166,7 @@
                                         (map #(assoc order :day (first %) :state (second %))
                                              (:days order))))
                               (filter (comp days :day)) (group-by :day))]
+     (.scrollTo js/window 0 0)
      {:db (assoc db
                  :start-date day
                  :current-days (map #(vector % (get filtered-orders %)) (sort days)))

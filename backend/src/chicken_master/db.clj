@@ -27,5 +27,5 @@
 
 (comment
   (create-user "bla" "bla")
-  (create-user "siloa" "krach")
-  (valid-user? "siloa" "krach"))
+  (create-user "siloa" "łąóś")
+  (valid-user? "siloa" "łąóś"))

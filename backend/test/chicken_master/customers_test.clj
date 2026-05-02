@@ -81,18 +81,18 @@
   (testing "product results are mapped correctly"
     (with-redefs [sql/query (constantly [{:customers/id 1 :customers/name "mr blobby" :bla 123}])]
       (is (= (sut/get-all 2)
-             [{:id 1 :name "mr blobby" :product-groups {} :prices nil}]))))
+             [{:id 1 :name "mr blobby" :notes nil :product-groups {} :prices nil}]))))
 
   (testing "customer groups are mapped correctly"
     (with-redefs [sql/query (constantly sample-customers)]
       (is (= (sut/get-all "1")
-             [{:id 1, :name "klient 1" :prices nil
+             [{:id 1, :name "klient 1" :notes nil :prices nil
                :product-groups {"group1" {:id 1 :products {:eggs {:amount 2, :price 43},
                                                            :milk {:amount 32, :price nil}}},
                                 "group 2" {:id 2 :products {:milk {:amount 1, :price 91},
                                                             :eggs {:amount 6, :price 23},
                                                             :carrots {:amount 89, :price nil}}}}}
-              {:id 2, :name "klient 2" :prices nil
+              {:id 2, :name "klient 2" :notes nil :prices nil
                :product-groups {"group 3" {:id 3 :products {:milk {:amount 41, :price 12},
                                                             :eggs {:amount 6, :price nil}}}}}])))))
 
@@ -101,8 +101,7 @@
     (with-redefs [jdbc/execute! (constantly [])
                   sql/query (constantly [{:customers/id 1 :customers/name "mr blobby" :bla 123}])]
       (is (= (sut/create! "1" "mr blobby")
-             {:customers [{:id 1 :name "mr blobby" :prices nil :product-groups {}}]})))))
-
+             {:customers [{:id 1 :name "mr blobby" :notes nil :prices nil :product-groups {}}]})))))
 
 (deftest save-product-group-test
   (let [user-id 1

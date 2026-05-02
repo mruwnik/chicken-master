@@ -20,19 +20,20 @@
      :unit recurrence-unit
      :every (or (int-or-nil recurrence-every) 1)}))
 
-(defn format-raw-order [{:strs [day who who-id notes] :as raw-values}]
+(defn format-raw-order [{:strs [day who who-id notes pickup-time] :as raw-values}]
   {:who {:name who
          :id (if (prod/num-or-nil who-id)
                (prod/num-or-nil who-id)
                ;; seeing as there's an autocomplete thingy, assume that if the name is the same,
                ;; then so is the user
                (some->> @(re-frame/subscribe [::subs/available-customers])
-                    (filter (comp #{who} :name))
-                    first :id))}
+                        (filter (comp #{who} :name))
+                        first :id))}
    :day day
    :notes notes
+   :pickup-time (or (some-> pickup-time keyword) :morning)
    :recurrence (parse-recurrence raw-values)
-   :products (prod/collect-products (remove (comp #{"who" "notes"} first) raw-values))})
+   :products (prod/collect-products (remove (comp #{"who" "notes" "pickup-time"} first) raw-values))})
 
 (defn get-group-products [customers who]
   (some->> customers (filter (comp #{who} :name))
@@ -52,14 +53,16 @@
          products))
 
 (defn order-form
-  ([order] (order-form order #{:who :day :notes :products :group-products :recurrence}))
+  ([order] (order-form order #{:who :day :notes :products :group-products :recurrence :pickup-time}))
   ([order fields]
    (let [customers @(re-frame/subscribe [::subs/available-customers])
          available-prods @(re-frame/subscribe [::subs/available-products])
+         customer-by-name (into {} (map (juxt :name identity) customers))
          state (-> (or order {})
                    (update :products reagent/atom)
                    (assoc :group-products
                           (get-group-products customers (-> order :who :name)))
+                   (update :pickup-time #(or % (-> order :who :name customer-by-name :pickup-time) :morning))
                    reagent/atom)]
      (fn []
        [:div
@@ -70,14 +73,26 @@
                                      :default (:name who)
                                      :list :customers
                                      :on-change (fn [e]
-                                                  (if-let [products (->> e .-target .-value (get-group-products customers))]
-                                                    (swap! state assoc :group-products products)))})
+                                                  (let [name (-> e .-target .-value)
+                                                        cust (customer-by-name name)]
+                                                    (when-let [products (get-group-products customers name)]
+                                                      (swap! state assoc :group-products products))
+                                                    (when (:pickup-time cust)
+                                                      (swap! state assoc :pickup-time (:pickup-time cust)))))})
              (into [:datalist {:id :customers}]
                    (for [cust customers] [:option {:value (:name cust) :id (:id cust)}]))
              [:input {:id :who-id :name :who-id :type :hidden :value (or (:id who) "")}]]))
 
         (when (:day fields)
           (html/input :day "dzień" {:type :date :required true :default (:day order)}))
+        (when (:pickup-time fields)
+          [:div {:class :input-item}
+           [:label {:for :pickup-time} "odbiór"]
+           [:select {:name :pickup-time :id :pickup-time
+                     :value (clojure.core/name (or (:pickup-time @state) :morning))
+                     :on-change #(swap! state assoc :pickup-time (-> % .-target .-value keyword))}
+            [:option {:value "morning"} "rano"]
+            [:option {:value "evening"} "wieczorem"]]])
         (when (and (:group-products fields) (-> @state :group-products seq))
           [prod/group-products state])
         (when (:notes fields)
@@ -129,17 +144,23 @@
                           (-> e .-dataTransfer (.setData "order-day" day))
                           (-> e .-dataTransfer (.setData "order-id" id)))}
    [:div {:class :actions}
-    (condp = state
-      :waiting   [:button {:on-click #(re-frame/dispatch [::event/fulfill-order id day])} "✓"]
-      :fulfilled [:button {:on-click #(re-frame/dispatch [::event/reset-order id day])} "X"]
-      :pending nil
-      nil nil)
-    [:button {:on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
-    [:button {:on-click #(re-frame/dispatch
+    [:button {:title "edytuj zamówienie"
+              :on-click #(re-frame/dispatch [::event/edit-order day id])} "E"]
+    [:button {:title "usuń zamówienie"
+              :on-click #(re-frame/dispatch
                           [::event/confirm-action
                            "na pewno usunąć?"
                            ::event/change-order-type id [::event/remove-order id day]])} "-"]]
-   [:div {:class :who} (:name who)]
+   [:div {:class :who}
+    (when (#{:waiting :fulfilled} state)
+      [:input {:type :checkbox
+               :class :pickup-check
+               :title (if (= state :fulfilled) "kliknij, aby cofnąć" "kliknij, gdy klient odebrał")
+               :checked (= state :fulfilled)
+               :on-change #(re-frame/dispatch
+                            [(if (= state :fulfilled) ::event/reset-order ::event/fulfill-order)
+                             id day])}])
+    [:span (:name who)]]
    (if (settings :show-order-time)
      [:div {:class :when} hour])
    (if (and (settings :show-order-notes) notes)
@@ -148,8 +169,29 @@
         (map (partial prod/format-product settings))
         (into [:div {:class :products}]))])
 
-(defn day [settings [date orders]]
-  (let [orders (map calc-order-prices orders)]
+(defn format-summary-product [_stock [product {:keys [amount]}]]
+  [:div {:key (gensym) :class :product}
+   [:span {:class :product-name} (prod/display-name product)]
+   [:span {:class :product-amount} amount]])
+
+(defn- summary-block [stock label orders]
+  [:div {:key (gensym) :class :summary}
+   [:hr {:class :day-seperator}]
+   [:div {:class :header} label]
+   (if (seq orders)
+     (->> orders
+          (map :products)
+          (apply merge-with merge-product-values)
+          (sort-by first)
+          (map (partial format-summary-product stock))
+          (into [:div {:class :products-sum}]))
+     [:div {:class [:products-sum :empty]} "—"])])
+
+(defn day [settings stock [date orders]]
+  (let [orders (map calc-order-prices orders)
+        pickup (fn [o] (or (:pickup-time o) :morning))
+        morning (filter #(= :morning (pickup %)) orders)
+        evening (filter #(= :evening (pickup %)) orders)]
     [:div {:class [:day (when (-> date time/parse-date time/today?) :today)]
            :on-drag-over #(.preventDefault %)
            :on-drop #(let [id  (-> % .-dataTransfer (.getData "order-id") prod/num-or-nil)
@@ -166,19 +208,15 @@
             doall)
        (when (settings :show-day-add-order)
          [:button {:type :button
+                   :title "dodaj zamówienie na ten dzień"
                    :on-click #(re-frame/dispatch [::event/edit-order date])} "+"])
-       (when (seq (map :products orders))
-         [:div {:class :summary}
-          [:hr {:class :day-seperator}]
-          [:div {:class :header} "w sumie:"]
-          (->> orders
-               (map :products)
-               (apply merge-with merge-product-values)
-               (sort-by first)
-               (map (partial prod/format-product settings))
-               (into [:div {:class :products-sum}]))])]]]))
+       (when (seq orders)
+         [:div
+          (summary-block stock "w sumie rano:" morning)
+          (summary-block stock "w sumie wieczorem:" evening)])]]]))
 
 (defn calendar [days settings]
-  (->> days
-       (map (partial day settings))
-       (into [:div {:class [:calendar :full-height]}])))
+  (let [stock @(re-frame/subscribe [::subs/available-products])]
+    (->> days
+         (map (partial day settings stock))
+         (into [:div {:class [:calendar :full-height]}]))))

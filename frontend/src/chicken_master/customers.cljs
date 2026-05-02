@@ -61,32 +61,59 @@
         :getter-fn #(when (seq @state)
                       (re-frame/dispatch [::event/save-customer-prices (:id who) @state]))]])))
 
-
 (defn show-customers []
   (html/modal
    :clients
    [:div {:class :customers-modal}
     [:h2 "Klienci"]
-    [prod/item-adder :callback #(re-frame/dispatch [::event/add-customer %]) :button "+"]
+    [(fn []
+       (let [name-state (reagent/atom "")]
+         (fn []
+           (let [add! (fn [pickup]
+                        (when-let [n (not-empty @name-state)]
+                          (re-frame/dispatch [::event/add-customer n pickup])
+                          (reset! name-state "")))]
+             [:div {:class :customer-add
+                    :on-click #(.stopPropagation %)}
+              [:input {:type :text :name :customer-name :value @name-state
+                       :on-change #(reset! name-state (-> % .-target .-value))}]
+              [:button {:type :button :class :add-product :disabled (= "" @name-state)
+                        :on-click #(add! :morning)} "+ rano"]
+              [:button {:type :button :class :add-product :disabled (= "" @name-state)
+                        :on-click #(add! :evening)} "+ wieczorem"]]))))]
     (let [client-orders (->> @(re-frame/subscribe [::subs/orders])
                              vals
                              (group-by #(get-in % [:who :id])))]
       (doall
-       (for [{:keys [name id] :as who} (sort-by #(some-> % :name str/lower-case) @(re-frame/subscribe [::subs/available-customers]))]
+       (for [{:keys [name id notes pickup-time] :as who} (sort-by #(some-> % :name str/lower-case) @(re-frame/subscribe [::subs/available-customers]))]
          [:details {:class :client :key (gensym)}
           [:summary [:span name [:button {:on-click #(re-frame/dispatch
                                                       [::event/confirm-action
                                                        "na pewno usunąć?"
                                                        ::event/remove-customer id])} "-"]]]
+          [:div {:class :customer-pickup-time}
+           [:label {:for (str "pickup-time-" id)} "odbiór: "]
+           [:select {:id (str "pickup-time-" id)
+                     :value (or (some-> pickup-time clojure.core/name) "morning")
+                     :on-change #(re-frame/dispatch [::event/save-customer-pickup-time id (-> % .-target .-value)])}
+            [:option {:value "morning"} "rano"]
+            [:option {:value "evening"} "wieczorem"]]]
+          [:div {:class :customer-notes}
+           (html/input (str "notes-" id) "notatka"
+                       {:default (or notes "")
+                        :placeholder "telefon, preferencje, godziny odbioru..."
+                        :on-blur #(let [v (-> % .-target .-value)]
+                                    (when (not= v (or notes ""))
+                                      (re-frame/dispatch [::event/save-customer-notes id v])))})]
           (when (config/settings :prices)
             [price-adder who])
 
-         [:details {:class :customer}
-          [:summary "Stałe zamówienia"]
-          (for [group (:product-groups who)]
-            [:div {:key (gensym)}
-             [product-group-adder who group]])
-          [product-group-adder who []]]
+          [:details {:class :customer}
+           [:summary "Stałe zamówienia"]
+           (for [group (:product-groups who)]
+             [:div {:key (gensym)}
+              [product-group-adder who group]])
+           [product-group-adder who []]]
 
           [:details {:class :client-orders}
            [:summary "Zamówienia"]

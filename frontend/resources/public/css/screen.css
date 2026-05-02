@@ -202,7 +202,7 @@ html body .calendar .day-header {
 }
 
 html body .calendar .day-header .day-name {
-  color: red;
+  color: black;
 }
 
 html body .calendar .day-header .date {
@@ -228,12 +228,22 @@ html body .calendar .day .orders {
 }
 
 html body .calendar .day .orders .actions {
-  display: none;
+  display: inline;
   float: right;
 }
 
-html body .calendar .day .orders .order:hover .actions {
-  display: inline;
+@media (hover: hover) {
+
+  html body .calendar .day .orders .actions {
+    display: none;
+  }
+  
+  
+  
+  html body .calendar .day .orders .order:hover .actions {
+    display: inline;
+  }
+
 }
 
 html body .calendar .day .orders .order.pending {
@@ -244,12 +254,25 @@ html body .calendar .day .orders .order.fulfilled {
   color: rgb(114, 114, 114);
 }
 
+html body .calendar .day .orders .order.fulfilled .who {
+  text-decoration: line-through;
+}
+
 html body .calendar .day .orders .who {
   font-size: 18px;
   font-weight: bold;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+html body .calendar .day .orders .who .pickup-check {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+  cursor: pointer;
+  accent-color: rgb(30, 90, 40);
 }
 
 html body .calendar .day .product {
@@ -276,8 +299,26 @@ html body .calendar .day .product .product-price {
   max-height: 5px;
 }
 
+html body .calendar .day .product .product-stock {
+  color: rgb(150, 150, 150);
+  margin-left: 4px;
+}
+
+html body .calendar .day .product.over-capacity {
+  color: rgb(192, 50, 50);
+  font-weight: bold;
+}
+
+html body .calendar .day .product.over-capacity .product-stock {
+  color: rgb(192, 50, 50);
+}
+
 html body .calendar .day .summary {
   margin-top: 10px;
+}
+
+html body .calendar .day .summary .day-seperator {
+  margin-right: 25px;
 }
 
 html body .stock-modal .add-product {

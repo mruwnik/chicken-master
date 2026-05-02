@@ -75,10 +75,11 @@
       :else nil ;; FIXME: What should happen if an invalid date is provided?
       )))
 
-(defn upsert-order! [tx user-id customer-id {:keys [id day notes action-type order-date recurrence] :as bla}]
+(defn upsert-order! [tx user-id customer-id {:keys [id day notes action-type order-date recurrence pickup-time] :as bla}]
   (let [updates (assoc? {:customer_id customer-id}
                         :recurrence (some-> recurrence t/make-rule)
                         :notes notes
+                        :pickup_time (some-> pickup-time clojure.core/name)
                         :order_date (some-> day t/to-db-date))
         order (db/get-by-id tx user-id :orders id)]
     (cond
@@ -100,6 +101,7 @@
 (defn structure-order [items]
   {:id         (-> items first :orders/id)
    :notes      (-> items first :orders/notes)
+   :pickup-time (some-> items first :orders/pickup_time keyword)
    :recurrence (some-> items first :orders/recurrence t/parse-rule)
    :who        {:id   (-> items first :customers/id)
                 :name (-> items first :customers/name)}
@@ -133,7 +135,7 @@
          (map (fn [[date status]] (assoc base-order :day date :state status))))))
 
 (def orders-query
-  "SELECT o.id, o.notes, ex.status, o.order_date, o.recurrence, c.id, c.name, p.name, op.amount, op.price, ex.order_date
+  "SELECT o.id, o.notes, o.pickup_time, ex.status, o.order_date, o.recurrence, c.id, c.name, p.name, op.amount, op.price, ex.order_date
    FROM orders o JOIN customers c ON o.customer_id = c.id
    LEFT OUTER JOIN recurrence_exceptions ex ON o.id = ex.order_id
    LEFT OUTER JOIN order_products op ON o.id = op.order_id
@@ -203,7 +205,7 @@
        (doseq [[prod {:keys [amount]}] (:products order)]
          (jdbc/execute-one! tx
                             [(str "UPDATE products SET amount = amount " operator " ? WHERE name = ?")
-                              amount (name prod)]))
+                             amount (name prod)]))
 
        (upsert-exception! tx id day state))
 
@@ -211,6 +213,7 @@
 
 (defn- full-delete [tx user-id id]
   (when-let [{:orders/keys [order_date end_date]} (some->> id (db/get-by-id tx user-id :orders))]
+    (sql/delete! tx :order_products {:order_id id})
     (sql/delete! tx :orders {:id id :user_id user-id})
     (get-fortnight tx user-id (t/earliest order_date end_date))))
 

@@ -16,7 +16,7 @@
        (doall
         (for [[product {:keys [amount price]}] @state]
           [:div {:key (gensym) :class :stock-product}
-           [:span {:class :product-name} product]
+           [:span {:class :product-name} (prod/display-name product)]
            [:div {:class :stock-product-amount}
             [:button {:type :button :on-click #(swap! state update-in [product :amount] dec)} "-"]
             (prod/number-input (str (name product) "-amount") "" (or amount 0)
@@ -29,7 +29,7 @@
                                  #(swap! state assoc-in
                                          [product :price]
                                          (some-> % .-target .-value prod/num-or-nil prod/normalise-price)))])]))
-       [prod/item-adder :callback #(swap! state assoc (keyword %) {:amount 0}) :button "+"]])))
+       [prod/item-adder :name :product-name :callback #(swap! state assoc (keyword %) {:amount 0}) :button "+"]])))
 
 (defn process-form [form]
   (->> form

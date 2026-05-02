@@ -20,12 +20,19 @@
 
 (defn get-customers [user-id] (get-values user-id [:customers]))
 (defn add-customer [{:keys [body basic-authentication]}]
-  (some->> body :name (customers/create! basic-authentication) as-edn))
+  (when-let [n (:name body)]
+    (as-edn (customers/create! basic-authentication n :pickup-time (:pickup-time body)))))
 (defn save-product-group [user-id customer-id body]
   (customers/save-product-group user-id (Integer/parseInt customer-id) body)
   (get-customers user-id))
 (defn save-customer-prices [user-id customer-id body]
   (customers/save-prices user-id (Integer/parseInt customer-id) body)
+  (get-customers user-id))
+(defn save-customer-notes [user-id customer-id body]
+  (customers/save-notes! user-id (Integer/parseInt customer-id) (:notes body))
+  (get-customers user-id))
+(defn save-customer-pickup-time [user-id customer-id body]
+  (customers/save-pickup-time! user-id (Integer/parseInt customer-id) (:pickup-time body))
   (get-customers user-id))
 
 (defn delete-customer [user-id id]
@@ -55,11 +62,15 @@
   (POST "/customers" request (add-customer request))
   (DELETE "/customers/:id" [id :as {user-id :basic-authentication}] (delete-customer user-id id))
   (POST "/customers/:id/product-group" [id :as {user-id :basic-authentication body :body}]
-        (save-product-group user-id id body))
+    (save-product-group user-id id body))
   (POST "/customers/:id/prices" [id :as {user-id :basic-authentication body :body}]
-        (save-customer-prices user-id id body))
+    (save-customer-prices user-id id body))
+  (POST "/customers/:id/notes" [id :as {user-id :basic-authentication body :body}]
+    (save-customer-notes user-id id body))
+  (POST "/customers/:id/pickup-time" [id :as {user-id :basic-authentication body :body}]
+    (save-customer-pickup-time user-id id body))
 
-  (GET "/products" request (get-products request))
+  (GET "/products" [:as {user-id :basic-authentication}] (get-products user-id))
   (POST "/products" request (save-products request))
 
   (GET "/orders" [:as {user-id :basic-authentication}] (get-orders user-id))
@@ -67,5 +78,5 @@
   (PUT "/orders/:id" request (update-order request))
   (DELETE "/orders/:id" [id :as {user-id :basic-authentication}] (delete-order user-id id nil nil))
   (POST "/orders/:id/remove" [id :as {user-id :basic-authentication body :body}]
-        (delete-order user-id id (:day body) (:action-type body)))
+    (delete-order user-id id (:day body) (:action-type body)))
   (POST "/orders/:id/:status" [id status :as {user-id :basic-authentication body :body}] (set-order-state user-id id (:day body) status)))

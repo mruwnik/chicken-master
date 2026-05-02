@@ -18,12 +18,18 @@
 (defn format-price [price] (when price (round (/ price 100) 2)))
 (defn normalise-price [price] (when price (round (* price 100) 0)))
 
+(defn display-name
+  "Humanise a product keyword for display: kebab → spaces, capitalise."
+  [k]
+  (when k
+    (-> k name (str/replace "-" " ") str/capitalize)))
+
 (defn number-input [id label amount on-blur]
   (html/input id label
               {:type :number
                :default (round amount 3)
                :step :any
-               :on-focus #(set! (-> % .-target .-value) "")
+               :on-focus #(.select (.-target %))
                :on-blur on-blur}))
 
 (defn collect-products [raw-values]
@@ -56,7 +62,7 @@
                               (if-not (= prod :-) (swap! state assoc prod {}))
                               (swap! state dissoc what))}
        (for [product (->> available (concat [what]) (remove nil?) sort vec)]
-         [:option {:key (gensym) :value product} (name product)])
+         [:option {:key (gensym) :value product} (display-name product)])
        [:option {:key (gensym) :value nil} "-"]]]
      (when (:amount fields)
        (number-input (str "amount-" id) nil (get-in @state [what :amount])
@@ -66,7 +72,12 @@
         (number-input (str "price-" id) "cena" (format-price (get-in @state [what :price]))
                       #(swap! state assoc-in
                               [what :price]
-                              (some-> % .-target .-value num-or-nil normalise-price)))])]))
+                              (some-> % .-target .-value num-or-nil normalise-price)))])
+     (when what
+       [:button {:type :button
+                 :class :remove-product
+                 :title "usuń tę pozycję"
+                 :on-click #(swap! state dissoc what)} "×"])]))
 
 (defn products-edit [state & {:keys [available-prods getter-fn fields]
                               :or {available-prods @(re-frame/subscribe [::subs/available-products])
@@ -95,7 +106,7 @@
 
 (defn format-product [settings [product {:keys [amount final-price]}]]
   [:div {:key (gensym) :class :product}
-   [:span {:class :product-name} product]
+   [:span {:class :product-name} (display-name product)]
    (if (settings :editable-number-inputs)
      (number-input (str "amount-" product) "" amount nil)
      [:span {:class :product-amount} amount])
@@ -103,12 +114,12 @@
      [:span {:class :product-price}
       (or (format-price final-price) (settings :empty-price-marker))])])
 
-(defn item-adder [& {:keys [type value callback button class]
-                     :or {type :text value "" button nil}}]
+(defn item-adder [& {:keys [type value callback button class name]
+                     :or {type :text value "" button nil name :item-name}}]
   (let [state (reagent/atom value)]
     (fn []
       [:div {:class class :on-click #(.stopPropagation %)}
-       [:input {:type type :name :user-name :default-value value :value @state
+       [:input {:type type :name name :value @state
                 :on-change #(let [val (-> % .-target .-value)]
                               (reset! state val)
                               (if-not button (callback val)))}]

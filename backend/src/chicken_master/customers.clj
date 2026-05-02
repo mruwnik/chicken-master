@@ -4,8 +4,6 @@
             [chicken-master.products :as products]
             [chicken-master.db :as db]))
 
-
-
 (defn insert-products [coll {:keys [id name]} products]
   (->> products
        (reduce #(assoc %1 (-> %2 :products/name keyword)
@@ -23,9 +21,8 @@
          (reduce-kv insert-products {})
          (assoc client :product-groups))))
 
-
 (def user-product-groups-query
-  "SELECT c.id, c.name, cg.name, cg.id, cgp.amount, cgp.price, p.name FROM customers c
+  "SELECT c.id, c.name, c.notes, c.pickup_time, cg.name, cg.id, cgp.amount, cgp.price, p.name FROM customers c
    LEFT OUTER JOIN customer_groups cg on c.id = cg.customer_id
    LEFT OUTER JOIN customer_group_products cgp on cg.id = cgp.customer_group_id
    LEFT OUTER JOIN products p ON p.id = cgp.product_id
@@ -37,10 +34,10 @@
    LEFT OUTER JOIN products p ON p.id = cp.product_id
    WHERE c.deleted IS NULL AND c.user_id = ?")
 
-
 (defn get-product-groups [user-id]
   (->> (sql/query db/db-uri [user-product-groups-query user-id])
-       (group-by (fn [{:customers/keys [id name]}] {:id id :name name}))
+       (group-by (fn [{:customers/keys [id name notes pickup_time]}]
+                   {:id id :name name :notes notes :pickup-time (keyword pickup_time)}))
        (map (partial apply extract-product-groups))))
 
 (defn get-prices [user-id]
@@ -57,15 +54,22 @@
     (map #(assoc % :prices (-> % :id prices))
          (get-product-groups user-id))))
 
-(defn create! [user-id name]
+(defn create! [user-id name & {:keys [pickup-time]}]
   (jdbc/execute! db/db-uri
-                 ["INSERT INTO customers (name, user_id) VALUES(?, ?) ON CONFLICT (name, user_id) DO UPDATE SET deleted = NULL"
-                  name user-id])
+                 ["INSERT INTO customers (name, user_id, pickup_time) VALUES(?, ?, ?) ON CONFLICT (name, user_id) DO UPDATE SET deleted = NULL, pickup_time = EXCLUDED.pickup_time"
+                  name user-id (clojure.core/name (or pickup-time :morning))])
   {:customers (get-all user-id)})
 
 (defn delete! [user-id id]
   (sql/update! db/db-uri :customers {:deleted true} {:id id :user_id user-id}))
 
+(defn save-notes! [user-id customer-id notes]
+  (sql/update! db/db-uri :customers {:notes notes} {:id customer-id :user_id user-id})
+  {:customers (get-all user-id)})
+
+(defn save-pickup-time! [user-id customer-id pickup-time]
+  (sql/update! db/db-uri :customers {:pickup_time (name pickup-time)} {:id customer-id :user_id user-id})
+  {:customers (get-all user-id)})
 
 (defn get-by-name [tx user-id name]
   (:customers/id (db/get-by-id tx user-id :customers name :name)))

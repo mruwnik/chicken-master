@@ -1,0 +1,2 @@
+{:up ["ALTER TABLE customers ADD COLUMN notes TEXT"]
+ :down ["ALTER TABLE customers DROP COLUMN notes"]}

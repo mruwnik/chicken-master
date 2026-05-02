@@ -23,7 +23,6 @@
    :on-success  [on-success]
    :on-failure     [on-failure]})
 
-
 (defn http-get [endpoint params on-success]
   (http-request :get endpoint :params params :on-success on-success))
 
@@ -65,8 +64,7 @@
  ::log-error
  (fn [_ [_ error]]
    (.error js/console error)
-   (js/alert "Wystąpił błąd")
-   ))
+   (js/alert "Wystąpił błąd")))
 
 (re-frame/reg-event-fx
  ::failed-request
@@ -127,7 +125,7 @@
                            (merge
                             {:action-type action-type}
                             (select-keys order [:id :day :hour :state :order-date])
-                            (select-keys form [:id :day :hour :state :who :notes :products :recurrence])))}))
+                            (select-keys form [:id :day :hour :state :who :notes :products :recurrence :pickup-time])))}))
 
 (re-frame/reg-event-fx
  ::process-fetched-days
@@ -137,13 +135,13 @@
                                     (for [[day orders] current-days]
                                       [day (if (contains? days day) (days day) orders)])))
             (update :orders (fn [orders] (->> days
-                                             (mapcat second)
-                                             (group-by :id)
-                                             vals
-                                             (map (fn [items] (->> items
-                                                                  (reduce #(assoc %1 (:day %2) (:state %2)) {})
-                                                                  (assoc (first items) :days))))
-                                             (reduce #(assoc %1 (:id %2) %2) orders)))))
+                                              (mapcat second)
+                                              (group-by :id)
+                                              vals
+                                              (map (fn [items] (->> items
+                                                                    (reduce #(assoc %1 (:day %2) (:state %2)) {})
+                                                                    (assoc (first items) :days))))
+                                              (reduce #(assoc %1 (:id %2) %2) orders)))))
     :dispatch [::stop-loading]}))
 
 (re-frame/reg-event-fx
@@ -187,16 +185,17 @@
 
 (re-frame/reg-event-fx
  ::add-customer
- (fn [_ [_ customer-name]]
+ (fn [_ [_ customer-name pickup-time]]
    {:http-xhrio (http-request :post "customers"
-                                            :body {:name customer-name}
-                                            :on-success ::process-stock)}))
+                              :body {:name customer-name
+                                     :pickup-time (or pickup-time :morning)}
+                              :on-success ::process-stock)}))
 (re-frame/reg-event-fx
  ::remove-customer
  (fn [_ [_ id]]
    {:dispatch [::start-loading]
-     :http-xhrio (http-request :delete (str "customers/" id)
-                                             :on-success ::process-stock)}))
+    :http-xhrio (http-request :delete (str "customers/" id)
+                              :on-success ::process-stock)}))
 
 (re-frame/reg-event-fx
  ::save-product-group
@@ -214,6 +213,22 @@
                               :body products
                               :on-success ::process-stock)}))
 
+(re-frame/reg-event-fx
+ ::save-customer-notes
+ (fn [_ [_ id notes]]
+   {:dispatch [::start-loading]
+    :http-xhrio (http-request :post (str "customers/" id "/notes")
+                              :body {:notes notes}
+                              :on-success ::process-stock)}))
+
+(re-frame/reg-event-fx
+ ::save-customer-pickup-time
+ (fn [_ [_ id pickup-time]]
+   {:dispatch [::start-loading]
+    :http-xhrio (http-request :post (str "customers/" id "/pickup-time")
+                              :body {:pickup-time pickup-time}
+                              :on-success ::process-stock)}))
+
 ;;; Storage events
 
 (re-frame/reg-event-fx
@@ -224,7 +239,7 @@
 
 (re-frame/reg-event-fx
  ::fetch-stock
- (fn [_ [_ ]]
+ (fn [_ [_]]
    {:dispatch [::start-loading]
     :http-xhrio (http-get "stock" {} ::process-stock)}))
 
@@ -238,8 +253,7 @@
    {:db (-> db
             (assoc-if :products stock)
             (assoc-if :customers stock))
-    :dispatch [::stop-loading]
-    }))
+    :dispatch [::stop-loading]}))
 
 (re-frame/reg-event-fx
  ::save-stock
@@ -253,7 +267,6 @@
  ::show-settings
  (fn [db _]
    (assoc-in db [:settings :show] true)))
-
 
 (re-frame/reg-event-fx
  ::set-user
@@ -270,5 +283,4 @@
 
 (comment
   (re-frame/dispatch-sync [::show-stock])
-  (re-frame/dispatch-sync [::update-product-stock :eggs 2])
-  )
+  (re-frame/dispatch-sync [::update-product-stock :eggs 2]))
